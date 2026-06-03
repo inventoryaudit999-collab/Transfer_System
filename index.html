@@ -13,6 +13,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<!-- SheetJS for Excel export -->
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
 <style>
 /* ===== CSS VARIABLES / THEMES ===== */
@@ -133,14 +135,15 @@ body {
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 /* ===== PAGE TRANSITIONS ===== */
-.page { display: none; min-height: 100vh; }
-.page.active { display: block; animation: fadeIn .3s ease; }
+.page { display: none !important; min-height: 100vh; }
+.page.active { display: block !important; animation: fadeIn .3s ease; }
+#loginPage.active { display: flex !important; }
+#appPage.active { display: flex !important; flex-direction: column; min-height: 100vh; }
 @keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 
 /* ===== LOGIN PAGE ===== */
 #loginPage {
   min-height: 100vh;
-  display: flex;
   align-items: center;
   justify-content: center;
   background: var(--header-gradient);
@@ -241,8 +244,7 @@ body {
 .btn-icon { padding: 8px; border-radius: 8px; }
 
 /* ===== MAIN LAYOUT ===== */
-#appPage { display: none; }
-#appPage.active { display: flex; flex-direction: column; min-height: 100vh; }
+/* appPage display handled by .page and #appPage.active rules above */
 
 /* ===== TOP NAV ===== */
 .topnav {
@@ -744,13 +746,13 @@ body.theme-dusk .role-store { background: #0C1E3D; color: #93C5FD; }
             <label class="form-label">BAY</label>
             <input type="text" id="eBay" class="form-control" placeholder="เช่น 026" maxlength="6" />
           </div>
-          <div class="form-group" style="grid-column: span 2;">
+          <div class="form-group">
             <label class="form-label">Item No.</label>
-            <div class="item-lookup-wrap">
-              <input type="text" id="eItem" class="form-control" placeholder="พิมพ์รหัสหรือชื่อสินค้า" oninput="searchItem(this.value)" onkeydown="handleItemKey(event)" autocomplete="off" />
-              <div class="item-lookup-result" id="itemDropdown"></div>
-            </div>
-            <div class="item-desc-display" id="itemDescDisplay"></div>
+            <input type="text" id="eItem" class="form-control" placeholder="คีย์รหัสสินค้า แล้วกด Enter" oninput="onItemInput(this.value)" onblur="lookupItemOnBlur()" onkeydown="handleItemKey(event)" autocomplete="off" inputmode="numeric" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">DESC (รายการสินค้า)</label>
+            <input type="text" id="eDesc" class="form-control" placeholder="— แสดงอัตโนมัติเมื่อคีย์ Item No. —" readonly style="background:var(--bg-input);color:var(--accent);font-weight:600;" />
           </div>
           <div class="form-group">
             <label class="form-label">จำนวน (QTY)</label>
@@ -783,10 +785,11 @@ body.theme-dusk .role-store { background: #0C1E3D; color: #93C5FD; }
                 <th>AISLE</th>
                 <th>BAY</th>
                 <th>Item No.</th>
-                <th>รายการ</th>
+                <th>DESC รายการ</th>
                 <th>QTY</th>
                 <th>ผู้เบิก</th>
                 <th>สถานะ</th>
+                <th>หมายเหตุ</th>
               </tr>
             </thead>
             <tbody id="myEntriesBody">
@@ -805,7 +808,7 @@ body.theme-dusk .role-store { background: #0C1E3D; color: #93C5FD; }
       </div>
       <div class="filter-row">
         <input type="text" id="approveSearch" class="form-control" placeholder="🔍 ค้นหา Item / ผู้เบิก..." oninput="filterApprove()" style="max-width:260px;">
-        <select class="form-control" id="approveFilterBranch" onchange="filterApprove()" style="max-width:200px;">
+        <select class="form-control" id="approveFilterBranch" onchange="filterApprove()" style="max-width:200px;" data-admin-only>
           <option value="">— ทุกสาขา —</option>
         </select>
         <button class="btn btn-outline btn-sm" onclick="loadPendingEntries()">🔄 รีเฟรช</button>
@@ -820,7 +823,7 @@ body.theme-dusk .role-store { background: #0C1E3D; color: #93C5FD; }
       <div class="section-header">
         <div class="section-title"><span>📂</span> รายการทั้งหมด</div>
         <div style="display:flex;gap:8px;">
-          <button class="btn btn-outline btn-sm" onclick="exportCSV()">⬇️ Export</button>
+          <button class="btn btn-outline btn-sm" id="exportBtn" onclick="exportExcel()">📊 Export Excel</button>
           <button class="btn btn-outline btn-sm" onclick="loadAllRecords()">🔄 รีเฟรช</button>
         </div>
       </div>
@@ -832,7 +835,7 @@ body.theme-dusk .role-store { background: #0C1E3D; color: #93C5FD; }
           <option value="approved">✅ Approved</option>
           <option value="rejected">❌ Rejected</option>
         </select>
-        <select class="form-control" id="recordFilterBranch" onchange="filterRecords()" style="max-width:200px;">
+        <select class="form-control" id="recordFilterBranch" onchange="filterRecords()" style="max-width:200px;" data-admin-only>
           <option value="">— ทุกสาขา —</option>
         </select>
       </div>
@@ -1006,11 +1009,205 @@ const BRANCHES = {
   105:"กะรน 105",106:"วารินชำราบ 106",107:"หนองบัวลำภู 107",108:"หนองจอก 108"
 };
 
-// ===== DEFAULT USERS (Firebase-independent fallback) =====
+// ===== DEFAULT USERS — All branches =====
 const DEFAULT_USERS = {
-  "admin": { username:"admin", displayName:"ผู้ดูแลระบบ", role:"admin", password:"admin1234", branchId: null },
-  "sgm001": { username:"sgm001", displayName:"SGM ส่วนกลาง", role:"sgm", password:"sgm1234", branchId: null },
-  "store001": { username:"store001", displayName:"สาขาลาดพร้าว 1", role:"store", password:"store1234", branchId: 1 }
+  "admin": { username:"admin", displayName:"ผู้ดูแลระบบ", role:"admin", password:"admin@1234", branchId: null },
+  "sgm001": { username:"sgm001", displayName:"SGM ลาดพร้าว 1", role:"sgm", password:"sgm001", branchId: 1 },
+  "store001": { username:"store001", displayName:"สาขาลาดพร้าว 1", role:"store", password:"store001", branchId: 1 },
+  "sgm002": { username:"sgm002", displayName:"SGM แจ้งวัฒนะ 2", role:"sgm", password:"sgm002", branchId: 2 },
+  "store002": { username:"store002", displayName:"สาขาแจ้งวัฒนะ 2", role:"store", password:"store002", branchId: 2 },
+  "sgm003": { username:"sgm003", displayName:"SGM ศรีนครินทร์ 3", role:"sgm", password:"sgm003", branchId: 3 },
+  "store003": { username:"store003", displayName:"สาขาศรีนครินทร์ 3", role:"store", password:"store003", branchId: 3 },
+  "sgm004": { username:"sgm004", displayName:"SGM บางบอน 4", role:"sgm", password:"sgm004", branchId: 4 },
+  "store004": { username:"store004", displayName:"สาขาบางบอน 4", role:"store", password:"store004", branchId: 4 },
+  "sgm005": { username:"sgm005", displayName:"SGM ชลบุรี 5", role:"sgm", password:"sgm005", branchId: 5 },
+  "store005": { username:"store005", displayName:"สาขาชลบุรี 5", role:"store", password:"store005", branchId: 5 },
+  "sgm006": { username:"sgm006", displayName:"SGM เชียงใหม่ 6", role:"sgm", password:"sgm006", branchId: 6 },
+  "store006": { username:"store006", displayName:"สาขาเชียงใหม่ 6", role:"store", password:"store006", branchId: 6 },
+  "sgm007": { username:"sgm007", displayName:"SGM นครราชสีมา 7", role:"sgm", password:"sgm007", branchId: 7 },
+  "store007": { username:"store007", displayName:"สาขานครราชสีมา 7", role:"store", password:"store007", branchId: 7 },
+  "sgm008": { username:"sgm008", displayName:"SGM รังสิต 8", role:"sgm", password:"sgm008", branchId: 8 },
+  "store008": { username:"store008", displayName:"สาขารังสิต 8", role:"store", password:"store008", branchId: 8 },
+  "sgm009": { username:"sgm009", displayName:"SGM หาดใหญ่ 9", role:"sgm", password:"sgm009", branchId: 9 },
+  "store009": { username:"store009", displayName:"สาขาหาดใหญ่ 9", role:"store", password:"store009", branchId: 9 },
+  "sgm010": { username:"sgm010", displayName:"SGM อุดรธานี 10", role:"sgm", password:"sgm010", branchId: 10 },
+  "store010": { username:"store010", displayName:"สาขาอุดรธานี 10", role:"store", password:"store010", branchId: 10 },
+  "sgm011": { username:"sgm011", displayName:"SGM พิษณุโลก 11", role:"sgm", password:"sgm011", branchId: 11 },
+  "store011": { username:"store011", displayName:"สาขาพิษณุโลก 11", role:"store", password:"store011", branchId: 11 },
+  "sgm012": { username:"sgm012", displayName:"SGM ขอนแก่น 12", role:"sgm", password:"sgm012", branchId: 12 },
+  "store012": { username:"store012", displayName:"สาขาขอนแก่น 12", role:"store", password:"store012", branchId: 12 },
+  "sgm013": { username:"sgm013", displayName:"SGM สุราษฎร์ธานี 13", role:"sgm", password:"sgm013", branchId: 13 },
+  "store013": { username:"store013", displayName:"สาขาสุราษฎร์ธานี 13", role:"store", password:"store013", branchId: 13 },
+  "sgm014": { username:"sgm014", displayName:"SGM อุบลราชธานี 14", role:"sgm", password:"sgm014", branchId: 14 },
+  "store014": { username:"store014", displayName:"สาขาอุบลราชธานี 14", role:"store", password:"store014", branchId: 14 },
+  "sgm015": { username:"sgm015", displayName:"SGM ระยอง 15", role:"sgm", password:"sgm015", branchId: 15 },
+  "store015": { username:"store015", displayName:"สาขาระยอง 15", role:"store", password:"store015", branchId: 15 },
+  "sgm016": { username:"sgm016", displayName:"SGM นครสวรรค์ 16", role:"sgm", password:"sgm016", branchId: 16 },
+  "store016": { username:"store016", displayName:"สาขานครสวรรค์ 16", role:"store", password:"store016", branchId: 16 },
+  "sgm017": { username:"sgm017", displayName:"SGM จรัญสนิทวงศ์ 17", role:"sgm", password:"sgm017", branchId: 17 },
+  "store017": { username:"store017", displayName:"สาขาจรัญสนิทวงศ์ 17", role:"store", password:"store017", branchId: 17 },
+  "sgm018": { username:"sgm018", displayName:"SGM สาทร 18", role:"sgm", password:"sgm018", branchId: 18 },
+  "store018": { username:"store018", displayName:"สาขาสาทร 18", role:"store", password:"store018", branchId: 18 },
+  "sgm019": { username:"sgm019", displayName:"SGM นครปฐม 19", role:"sgm", password:"sgm019", branchId: 19 },
+  "store019": { username:"store019", displayName:"สาขานครปฐม 19", role:"store", password:"store019", branchId: 19 },
+  "sgm020": { username:"sgm020", displayName:"SGM สุรินทร์ 20", role:"sgm", password:"sgm020", branchId: 20 },
+  "store020": { username:"store020", displayName:"สาขาสุรินทร์ 20", role:"store", password:"store020", branchId: 20 },
+  "sgm021": { username:"sgm021", displayName:"SGM สามเสน 21", role:"sgm", password:"sgm021", branchId: 21 },
+  "store021": { username:"store021", displayName:"สาขาสามเสน 21", role:"store", password:"store021", branchId: 21 },
+  "sgm022": { username:"sgm022", displayName:"SGM นครศรีธรรมราช 22", role:"sgm", password:"sgm022", branchId: 22 },
+  "store022": { username:"store022", displayName:"สาขานครศรีธรรมราช 22", role:"store", password:"store022", branchId: 22 },
+  "sgm023": { username:"sgm023", displayName:"SGM เชียงราย 23", role:"sgm", password:"sgm023", branchId: 23 },
+  "store023": { username:"store023", displayName:"สาขาเชียงราย 23", role:"store", password:"store023", branchId: 23 },
+  "sgm024": { username:"sgm024", displayName:"SGM สกลนคร 24", role:"sgm", password:"sgm024", branchId: 24 },
+  "store024": { username:"store024", displayName:"สาขาสกลนคร 24", role:"store", password:"store024", branchId: 24 },
+  "sgm025": { username:"sgm025", displayName:"SGM สุพรรณบุรี 25", role:"sgm", password:"sgm025", branchId: 25 },
+  "store025": { username:"store025", displayName:"สาขาสุพรรณบุรี 25", role:"store", password:"store025", branchId: 25 },
+  "sgm026": { username:"sgm026", displayName:"SGM จันทบุรี 26", role:"sgm", password:"sgm026", branchId: 26 },
+  "store026": { username:"store026", displayName:"สาขาจันทบุรี 26", role:"store", password:"store026", branchId: 26 },
+  "sgm027": { username:"sgm027", displayName:"SGM ภูเก็ต 27", role:"sgm", password:"sgm027", branchId: 27 },
+  "store027": { username:"store027", displayName:"สาขาภูเก็ต 27", role:"store", password:"store027", branchId: 27 },
+  "sgm028": { username:"sgm028", displayName:"SGM ร้อยเอ็ด 28", role:"sgm", password:"sgm028", branchId: 28 },
+  "store028": { username:"store028", displayName:"สาขาร้อยเอ็ด 28", role:"store", password:"store028", branchId: 28 },
+  "sgm029": { username:"sgm029", displayName:"SGM ตรัง 29", role:"sgm", password:"sgm029", branchId: 29 },
+  "store029": { username:"store029", displayName:"สาขาตรัง 29", role:"store", password:"store029", branchId: 29 },
+  "sgm030": { username:"sgm030", displayName:"SGM สระแก้ว 30", role:"sgm", password:"sgm030", branchId: 30 },
+  "store030": { username:"store030", displayName:"สาขาสระแก้ว 30", role:"store", password:"store030", branchId: 30 },
+  "sgm031": { username:"sgm031", displayName:"SGM เกาะสมุย 31", role:"sgm", password:"sgm031", branchId: 31 },
+  "store031": { username:"store031", displayName:"สาขาเกาะสมุย 31", role:"store", password:"store031", branchId: 31 },
+  "sgm032": { username:"sgm032", displayName:"SGM บุรีรัมย์ 32", role:"sgm", password:"sgm032", branchId: 32 },
+  "store032": { username:"store032", displayName:"สาขาบุรีรัมย์ 32", role:"store", password:"store032", branchId: 32 },
+  "sgm033": { username:"sgm033", displayName:"SGM ศรีสะเกษ 33", role:"sgm", password:"sgm033", branchId: 33 },
+  "store033": { username:"store033", displayName:"สาขาศรีสะเกษ 33", role:"store", password:"store033", branchId: 33 },
+  "sgm034": { username:"sgm034", displayName:"SGM ลำพูน 34", role:"sgm", password:"sgm034", branchId: 34 },
+  "store034": { username:"store034", displayName:"สาขาลำพูน 34", role:"store", password:"store034", branchId: 34 },
+  "sgm035": { username:"sgm035", displayName:"SGM กระบี่ 35", role:"sgm", password:"sgm035", branchId: 35 },
+  "store035": { username:"store035", displayName:"สาขากระบี่ 35", role:"store", password:"store035", branchId: 35 },
+  "sgm036": { username:"sgm036", displayName:"SGM เพชรบุรี 36", role:"sgm", password:"sgm036", branchId: 36 },
+  "store036": { username:"store036", displayName:"สาขาเพชรบุรี 36", role:"store", password:"store036", branchId: 36 },
+  "sgm037": { username:"sgm037", displayName:"SGM ชัยภูมิ 37", role:"sgm", password:"sgm037", branchId: 37 },
+  "store037": { username:"store037", displayName:"สาขาชัยภูมิ 37", role:"store", password:"store037", branchId: 37 },
+  "sgm038": { username:"sgm038", displayName:"SGM สระบุรี 38", role:"sgm", password:"sgm038", branchId: 38 },
+  "store038": { username:"store038", displayName:"สาขาสระบุรี 38", role:"store", password:"store038", branchId: 38 },
+  "sgm039": { username:"sgm039", displayName:"SGM ปราณบุรี 39", role:"sgm", password:"sgm039", branchId: 39 },
+  "store039": { username:"store039", displayName:"สาขาปราณบุรี 39", role:"store", password:"store039", branchId: 39 },
+  "sgm040": { username:"sgm040", displayName:"SGM ฉะเชิงเทรา 40", role:"sgm", password:"sgm040", branchId: 40 },
+  "store040": { username:"store040", displayName:"สาขาฉะเชิงเทรา 40", role:"store", password:"store040", branchId: 40 },
+  "sgm041": { username:"sgm041", displayName:"SGM เชียงใหม่2 41", role:"sgm", password:"sgm041", branchId: 41 },
+  "store041": { username:"store041", displayName:"สาขาเชียงใหม่2 41", role:"store", password:"store041", branchId: 41 },
+  "sgm042": { username:"sgm042", displayName:"SGM รามอินทรา 42", role:"sgm", password:"sgm042", branchId: 42 },
+  "store042": { username:"store042", displayName:"สาขารามอินทรา 42", role:"store", password:"store042", branchId: 42 },
+  "sgm043": { username:"sgm043", displayName:"SGM ชุมพร 43", role:"sgm", password:"sgm043", branchId: 43 },
+  "store043": { username:"store043", displayName:"สาขาชุมพร 43", role:"store", password:"store043", branchId: 43 },
+  "sgm044": { username:"sgm044", displayName:"SGM พัทยา 44", role:"sgm", password:"sgm044", branchId: 44 },
+  "store044": { username:"store044", displayName:"สาขาพัทยา 44", role:"store", password:"store044", branchId: 44 },
+  "sgm045": { username:"sgm045", displayName:"SGM กำแพงเพชร 45", role:"sgm", password:"sgm045", branchId: 45 },
+  "store045": { username:"store045", displayName:"สาขากำแพงเพชร 45", role:"store", password:"store045", branchId: 45 },
+  "sgm046": { username:"sgm046", displayName:"SGM กาญจนบุรี 46", role:"sgm", password:"sgm046", branchId: 46 },
+  "store046": { username:"store046", displayName:"สาขากาญจนบุรี 46", role:"store", password:"store046", branchId: 46 },
+  "sgm047": { username:"sgm047", displayName:"SGM ลพบุรี 47", role:"sgm", password:"sgm047", branchId: 47 },
+  "store047": { username:"store047", displayName:"สาขาลพบุรี 47", role:"store", password:"store047", branchId: 47 },
+  "sgm048": { username:"sgm048", displayName:"SGM หนองคาย 48", role:"sgm", password:"sgm048", branchId: 48 },
+  "store048": { username:"store048", displayName:"สาขาหนองคาย 48", role:"store", password:"store048", branchId: 48 },
+  "sgm049": { username:"sgm049", displayName:"SGM ราชบุรี 49", role:"sgm", password:"sgm049", branchId: 49 },
+  "store049": { username:"store049", displayName:"สาขาราชบุรี 49", role:"store", password:"store049", branchId: 49 },
+  "sgm050": { username:"sgm050", displayName:"SGM แม่ริม 50", role:"sgm", password:"sgm050", branchId: 50 },
+  "store050": { username:"store050", displayName:"สาขาแม่ริม 50", role:"store", password:"store050", branchId: 50 },
+  "sgm051": { username:"sgm051", displayName:"SGM อยุธยา 51", role:"sgm", password:"sgm051", branchId: 51 },
+  "store051": { username:"store051", displayName:"สาขาอยุธยา 51", role:"store", password:"store051", branchId: 51 },
+  "sgm052": { username:"sgm052", displayName:"SGM ลำปาง 52", role:"sgm", password:"sgm052", branchId: 52 },
+  "store052": { username:"store052", displayName:"สาขาลำปาง 52", role:"store", password:"store052", branchId: 52 },
+  "sgm053": { username:"sgm053", displayName:"SGM หัวหิน 53", role:"sgm", password:"sgm053", branchId: 53 },
+  "store053": { username:"store053", displayName:"สาขาหัวหิน 53", role:"store", password:"store053", branchId: 53 },
+  "sgm054": { username:"sgm054", displayName:"SGM คลองหลวง 54", role:"sgm", password:"sgm054", branchId: 54 },
+  "store054": { username:"store054", displayName:"สาขาคลองหลวง 54", role:"store", password:"store054", branchId: 54 },
+  "sgm055": { username:"sgm055", displayName:"SGM เลย 55", role:"sgm", password:"sgm055", branchId: 55 },
+  "store055": { username:"store055", displayName:"สาขาเลย 55", role:"store", password:"store055", branchId: 55 },
+  "sgm056": { username:"sgm056", displayName:"SGM เพชรบูรณ์ 56", role:"sgm", password:"sgm056", branchId: 56 },
+  "store056": { username:"store056", displayName:"สาขาเพชรบูรณ์ 56", role:"store", password:"store056", branchId: 56 },
+  "sgm057": { username:"sgm057", displayName:"SGM บางพลี 57", role:"sgm", password:"sgm057", branchId: 57 },
+  "store057": { username:"store057", displayName:"สาขาบางพลี 57", role:"store", password:"store057", branchId: 57 },
+  "sgm058": { username:"sgm058", displayName:"SGM มุกดาหาร 58", role:"sgm", password:"sgm058", branchId: 58 },
+  "store058": { username:"store058", displayName:"สาขามุกดาหาร 58", role:"store", password:"store058", branchId: 58 },
+  "sgm059": { username:"sgm059", displayName:"SGM สตูล 59", role:"sgm", password:"sgm059", branchId: 59 },
+  "store059": { username:"store059", displayName:"สาขาสตูล 59", role:"store", password:"store059", branchId: 59 },
+  "sgm060": { username:"sgm060", displayName:"SGM ตราด 60", role:"sgm", password:"sgm060", branchId: 60 },
+  "store060": { username:"store060", displayName:"สาขาตราด 60", role:"store", password:"store060", branchId: 60 },
+  "sgm061": { username:"sgm061", displayName:"SGM ชุมแพ 61", role:"sgm", password:"sgm061", branchId: 61 },
+  "store061": { username:"store061", displayName:"สาขาชุมแพ 61", role:"store", password:"store061", branchId: 61 },
+  "sgm062": { username:"sgm062", displayName:"SGM ราไวย์ 62", role:"sgm", password:"sgm062", branchId: 62 },
+  "store062": { username:"store062", displayName:"สาขาราไวย์ 62", role:"store", password:"store062", branchId: 62 },
+  "sgm063": { username:"sgm063", displayName:"SGM นครพนม 63", role:"sgm", password:"sgm063", branchId: 63 },
+  "store063": { username:"store063", displayName:"สาขานครพนม 63", role:"store", password:"store063", branchId: 63 },
+  "sgm064": { username:"sgm064", displayName:"SGM เกาะพะงัน 64", role:"sgm", password:"sgm064", branchId: 64 },
+  "store064": { username:"store064", displayName:"สาขาเกาะพะงัน 64", role:"store", password:"store064", branchId: 64 },
+  "sgm065": { username:"sgm065", displayName:"SGM บึงกาฬ 65", role:"sgm", password:"sgm065", branchId: 65 },
+  "store065": { username:"store065", displayName:"สาขาบึงกาฬ 65", role:"store", password:"store065", branchId: 65 },
+  "sgm066": { username:"sgm066", displayName:"SGM พัทยาเหนือ 66", role:"sgm", password:"sgm066", branchId: 66 },
+  "store066": { username:"store066", displayName:"สาขาพัทยาเหนือ 66", role:"store", password:"store066", branchId: 66 },
+  "sgm067": { username:"sgm067", displayName:"SGM แม่สาย 67", role:"sgm", password:"sgm067", branchId: 67 },
+  "store067": { username:"store067", displayName:"สาขาแม่สาย 67", role:"store", password:"store067", branchId: 67 },
+  "sgm068": { username:"sgm068", displayName:"SGM ศาลายา 68", role:"sgm", password:"sgm068", branchId: 68 },
+  "store068": { username:"store068", displayName:"สาขาศาลายา 68", role:"store", password:"store068", branchId: 68 },
+  "sgm069": { username:"sgm069", displayName:"SGM พัทลุง 69", role:"sgm", password:"sgm069", branchId: 69 },
+  "store069": { username:"store069", displayName:"สาขาพัทลุง 69", role:"store", password:"store069", branchId: 69 },
+  "sgm070": { username:"sgm070", displayName:"SGM สุโขทัย 70", role:"sgm", password:"sgm070", branchId: 70 },
+  "store070": { username:"store070", displayName:"สาขาสุโขทัย 70", role:"store", password:"store070", branchId: 70 },
+  "sgm071": { username:"sgm071", displayName:"SGM ป่าตอง 71", role:"sgm", password:"sgm071", branchId: 71 },
+  "store071": { username:"store071", displayName:"สาขาป่าตอง 71", role:"store", password:"store071", branchId: 71 },
+  "sgm072": { username:"sgm072", displayName:"SGM สมุทรสาคร 72", role:"sgm", password:"sgm072", branchId: 72 },
+  "store072": { username:"store072", displayName:"สาขาสมุทรสาคร 72", role:"store", password:"store072", branchId: 72 },
+  "sgm073": { username:"sgm073", displayName:"SGM แม่สอด 73", role:"sgm", password:"sgm073", branchId: 73 },
+  "store073": { username:"store073", displayName:"สาขาแม่สอด 73", role:"store", password:"store073", branchId: 73 },
+  "sgm074": { username:"sgm074", displayName:"SGM ปากช่อง 74", role:"sgm", password:"sgm074", branchId: 74 },
+  "store074": { username:"store074", displayName:"สาขาปากช่อง 74", role:"store", password:"store074", branchId: 74 },
+  "sgm075": { username:"sgm075", displayName:"SGM ถลาง 75", role:"sgm", password:"sgm075", branchId: 75 },
+  "store075": { username:"store075", displayName:"สาขาถลาง 75", role:"store", password:"store075", branchId: 75 },
+  "sgm076": { username:"sgm076", displayName:"SGM ระนอง 76", role:"sgm", password:"sgm076", branchId: 76 },
+  "store076": { username:"store076", displayName:"สาขาระนอง 76", role:"store", password:"store076", branchId: 76 },
+  "sgm077": { username:"sgm077", displayName:"SGM ละไม 77", role:"sgm", password:"sgm077", branchId: 77 },
+  "store077": { username:"store077", displayName:"สาขาละไม 77", role:"store", password:"store077", branchId: 77 },
+  "sgm078": { username:"sgm078", displayName:"SGM กัลปพฤกษ์ 78", role:"sgm", password:"sgm078", branchId: 78 },
+  "store078": { username:"store078", displayName:"สาขากัลปพฤกษ์ 78", role:"store", password:"store078", branchId: 78 },
+  "sgm079": { username:"sgm079", displayName:"SGM ยโสธร 79", role:"sgm", password:"sgm079", branchId: 79 },
+  "store079": { username:"store079", displayName:"สาขายโสธร 79", role:"store", password:"store079", branchId: 79 },
+  "sgm080": { username:"sgm080", displayName:"SGM มหาสารคาม 80", role:"sgm", password:"sgm080", branchId: 80 },
+  "store080": { username:"store080", displayName:"สาขามหาสารคาม 80", role:"store", password:"store080", branchId: 80 },
+  "sgm081": { username:"sgm081", displayName:"SGM ฝาง 81", role:"sgm", password:"sgm081", branchId: 81 },
+  "store081": { username:"store081", displayName:"สาขาฝาง 81", role:"store", password:"store081", branchId: 81 },
+  "sgm082": { username:"sgm082", displayName:"SGM นครนายก 82", role:"sgm", password:"sgm082", branchId: 82 },
+  "store082": { username:"store082", displayName:"สาขานครนายก 82", role:"store", password:"store082", branchId: 82 },
+  "sgm083": { username:"sgm083", displayName:"SGM นครอินทร์ 83", role:"sgm", password:"sgm083", branchId: 83 },
+  "store083": { username:"store083", displayName:"สาขานครอินทร์ 83", role:"store", password:"store083", branchId: 83 },
+  "sgm084": { username:"sgm084", displayName:"SGM บ้านเพ 84", role:"sgm", password:"sgm084", branchId: 84 },
+  "store084": { username:"store084", displayName:"สาขาบ้านเพ 84", role:"store", password:"store084", branchId: 84 },
+  "sgm085": { username:"sgm085", displayName:"SGM ทุ่งสง 85", role:"sgm", password:"sgm085", branchId: 85 },
+  "store085": { username:"store085", displayName:"สาขาทุ่งสง 85", role:"store", password:"store085", branchId: 85 },
+  "sgm086": { username:"sgm086", displayName:"SGM ศรีนครินทร์2 86", role:"sgm", password:"sgm086", branchId: 86 },
+  "store086": { username:"store086", displayName:"สาขาศรีนครินทร์2 86", role:"store", password:"store086", branchId: 86 },
+  "sgm087": { username:"sgm087", displayName:"SGM พะเยา 87", role:"sgm", password:"sgm087", branchId: 87 },
+  "store087": { username:"store087", displayName:"สาขาพะเยา 87", role:"store", password:"store087", branchId: 87 },
+  "sgm089": { username:"sgm089", displayName:"SGM พิษณุโลก2 89", role:"sgm", password:"sgm089", branchId: 89 },
+  "store089": { username:"store089", displayName:"สาขาพิษณุโลก2 89", role:"store", password:"store089", branchId: 89 },
+  "sgm096": { username:"sgm096", displayName:"SGM ทาวน์อินทาวน์ 96", role:"sgm", password:"sgm096", branchId: 96 },
+  "store096": { username:"store096", displayName:"สาขาทาวน์อินทาวน์ 96", role:"store", password:"store096", branchId: 96 },
+  "sgm100": { username:"sgm100", displayName:"SGM แพร่ 100", role:"sgm", password:"sgm100", branchId: 100 },
+  "store100": { username:"store100", displayName:"สาขาแพร่ 100", role:"store", password:"store100", branchId: 100 },
+  "sgm101": { username:"sgm101", displayName:"SGM เกาะช้าง 101", role:"sgm", password:"sgm101", branchId: 101 },
+  "store101": { username:"store101", displayName:"สาขาเกาะช้าง 101", role:"store", password:"store101", branchId: 101 },
+  "sgm102": { username:"sgm102", displayName:"SGM นครราชสีมา2 102", role:"sgm", password:"sgm102", branchId: 102 },
+  "store102": { username:"store102", displayName:"สาขานครราชสีมา2 102", role:"store", password:"store102", branchId: 102 },
+  "sgm103": { username:"sgm103", displayName:"SGM น่าน 103", role:"sgm", password:"sgm103", branchId: 103 },
+  "store103": { username:"store103", displayName:"สาขาน่าน 103", role:"store", password:"store103", branchId: 103 },
+  "sgm104": { username:"sgm104", displayName:"SGM อ่าวนาง 104", role:"sgm", password:"sgm104", branchId: 104 },
+  "store104": { username:"store104", displayName:"สาขาอ่าวนาง 104", role:"store", password:"store104", branchId: 104 },
+  "sgm105": { username:"sgm105", displayName:"SGM กะรน 105", role:"sgm", password:"sgm105", branchId: 105 },
+  "store105": { username:"store105", displayName:"สาขากะรน 105", role:"store", password:"store105", branchId: 105 },
+  "sgm106": { username:"sgm106", displayName:"SGM วารินชำราบ 106", role:"sgm", password:"sgm106", branchId: 106 },
+  "store106": { username:"store106", displayName:"สาขาวารินชำราบ 106", role:"store", password:"store106", branchId: 106 },
+  "sgm107": { username:"sgm107", displayName:"SGM หนองบัวลำภู 107", role:"sgm", password:"sgm107", branchId: 107 },
+  "store107": { username:"store107", displayName:"สาขาหนองบัวลำภู 107", role:"store", password:"store107", branchId: 107 },
+  "sgm108": { username:"sgm108", displayName:"SGM หนองจอก 108", role:"sgm", password:"sgm108", branchId: 108 },
+  "store108": { username:"store108", displayName:"สาขาหนองจอก 108", role:"store", password:"store108", branchId: 108 }
 };
 
 // ===== STATE =====
@@ -1123,8 +1320,11 @@ function showApp() {
   // Store branch label
   if (currentUser.branchId) {
     document.getElementById('storeBranchLabel').textContent = 'สาขา: ' + (BRANCHES[currentUser.branchId] || currentUser.branchId);
-    document.getElementById('eRequester').value = currentUser.displayName || '';
+  } else {
+    document.getElementById('storeBranchLabel').textContent = 'สาขา: ส่วนกลาง';
   }
+  // ผู้เบิก: ให้ user กรอกเอง ไม่ auto-fill
+  document.getElementById('eRequester').value = '';
 
   buildTabs();
   switchTab(activeTab);
@@ -1166,6 +1366,15 @@ function buildTabs() {
   }
   if (role === 'admin') loadUsers();
   loadMyEntries();
+
+  // Show/hide admin-only elements
+  setTimeout(() => {
+    document.querySelectorAll('[data-admin-only]').forEach(el => {
+      el.style.display = role === 'admin' ? '' : 'none';
+    });
+    const exportBtn = document.getElementById('exportBtn');
+    if (exportBtn) exportBtn.style.display = role === 'admin' ? '' : 'none';
+  }, 100);
 }
 
 function switchTab(id) {
@@ -1194,96 +1403,98 @@ function populateBranchSelects() {
   if (uBranch) uBranch.innerHTML = '<option value="">— ระบบกลาง —</option>' + opts;
 }
 
-// ===== ITEM SEARCH =====
-const ITEM_CACHE = {};
+// ===== ITEM LOOKUP =====
+// Items DB: loaded from Firebase on first lookup, then cached in memory
+const ITEM_CACHE = {};   // code -> desc string
+let ITEMS_DB = null;     // full local dict after Firebase load attempt
 
-async function searchItem(val) {
-  selectedItem = null;
-  document.getElementById('itemDescDisplay').classList.remove('show');
-  const dropdown = document.getElementById('itemDropdown');
-
-  if (!val || val.length < 3) { dropdown.style.display = 'none'; return; }
-  clearTimeout(itemSearchTimeout);
-  itemSearchTimeout = setTimeout(async () => {
-    dropdown.innerHTML = '<div class="item-option" style="color:var(--text-muted);cursor:default;">กำลังค้นหา...</div>';
-    dropdown.style.display = 'block';
-
-    let results = [];
-
-    if (firebaseOK) {
-      try {
-        // Search by item number (exact or prefix)
-        const snap = await db.ref('items').orderByKey().startAt(val).limitToFirst(20).get();
-        if (snap.exists()) {
-          snap.forEach(c => {
-            const d = c.val();
-            results.push({ code: c.key, desc: d.d, price: d.p });
-          });
-        }
-        // Also search by code direct
-        if (results.length === 0) {
-          const snap2 = await db.ref('items/' + val).get();
-          if (snap2.exists()) {
-            const d = snap2.val();
-            results.push({ code: val, desc: d.d, price: d.p });
-          }
-        }
-      } catch(e) { console.error('item search', e); }
-    }
-
-    // Fallback demo items
-    if (results.length === 0) {
-      const demoItems = {
-        '149266': { desc: 'สาลี่หอมแดง', price: 28 },
-        '148762': { desc: 'ทับทิมไทย กก.ละ', price: 69 },
-        '145128': { desc: 'ถั่วลิงสงต้ม', price: 30 },
-        '143998': { desc: 'มะละกอสุก คัดพิเศษ', price: 24 },
-        '100479': { desc: 'ปวยเล้ง 1 กก.', price: 79 },
-        '188556': { desc: 'กล้วยหอมสุก (เบเกอรี่)', price: 20 },
-        '208745': { desc: 'กล้วยหอม B หวีละ', price: 99 },
-        '161063': { desc: 'ถั่วลิสง (พระราชทาน)', price: 89 }
-      };
-      results = Object.entries(demoItems)
-        .filter(([k,v]) => k.includes(val) || v.desc.includes(val))
-        .map(([k,v]) => ({ code: k, desc: v.desc, price: v.price }));
-    }
-
-    if (results.length === 0) {
-      dropdown.innerHTML = '<div class="item-option" style="color:var(--text-muted);cursor:default;">ไม่พบสินค้า</div>';
+async function loadItemsDB() {
+  if (ITEMS_DB !== null) return;
+  ITEMS_DB = {};
+  if (firebaseOK) {
+    try {
+      // Try to load from Firebase items node
+      const snap = await db.ref('items').get();
+      if (snap.exists()) {
+        snap.forEach(c => { ITEMS_DB[c.key] = c.val().d || c.val(); });
+        console.log('Items loaded from Firebase:', Object.keys(ITEMS_DB).length);
+        return;
+      }
+    } catch(e) { console.warn('Firebase items load failed:', e.message); }
+  }
+  // Fallback: try to fetch items.json from same origin
+  try {
+    const res = await fetch('items.json');
+    if (res.ok) {
+      ITEMS_DB = await res.json();
+      console.log('Items loaded from items.json:', Object.keys(ITEMS_DB).length);
       return;
     }
-
-    dropdown.innerHTML = results.slice(0,15).map(r => `
-      <div class="item-option" onclick="selectItem('${r.code}','${r.desc}',${r.price})">
-        <div>
-          <div class="item-option-code">${r.code}</div>
-          <div class="item-option-name">${r.desc}</div>
-        </div>
-        <div class="item-option-price">฿${r.price}</div>
-      </div>
-    `).join('');
-    dropdown.style.display = 'block';
-  }, 300);
+  } catch(e) { console.warn('items.json fetch failed'); }
+  // Final fallback: hardcoded demo
+  ITEMS_DB = {
+    '149266':'สาลี่หอมแดง','148762':'ทับทิมไทย กก.ละ','145128':'ถั่วลิงสงต้ม',
+    '143998':'มะละกอสุก คัดพิเศษ','100479':'ปวยเล้ง 1 กก.','188556':'กล้วยหอมสุก (เบเกอรี่)',
+    '208745':'กล้วยหอม B หวีละ','161063':'ถั่วลิสง (พระราชทาน)',
+    '115904':'กระจับต้ม กก.ละ','81081':'กุ้งขาวเล็ก 61-65 ตัว/กก. กก.ละ'
+  };
 }
 
-function selectItem(code, desc, price) {
-  selectedItem = { code, desc, price };
-  document.getElementById('eItem').value = code;
-  document.getElementById('itemDropdown').style.display = 'none';
-  const disp = document.getElementById('itemDescDisplay');
-  disp.textContent = `✅ ${desc} — ราคา ฿${price}`;
-  disp.classList.add('show');
+function onItemInput(val) {
+  selectedItem = null;
+  const descEl = document.getElementById('eDesc');
+  if (!val || val.trim() === '') {
+    descEl.value = '';
+    descEl.style.color = '';
+    return;
+  }
+  clearTimeout(itemSearchTimeout);
+  itemSearchTimeout = setTimeout(() => lookupItem(val.trim()), 400);
+}
+
+function lookupItemOnBlur() {
+  const val = document.getElementById('eItem').value.trim();
+  if (val) lookupItem(val);
+}
+
+async function lookupItem(code) {
+  if (!code) return;
+  const descEl = document.getElementById('eDesc');
+  descEl.value = 'กำลังค้นหา...';
+  descEl.style.color = 'var(--text-muted)';
+
+  // Check memory cache
+  if (ITEM_CACHE[code]) {
+    const desc = ITEM_CACHE[code];
+    selectedItem = { code, desc };
+    descEl.value = desc;
+    descEl.style.color = 'var(--success)';
+    return;
+  }
+
+  // Load DB if not loaded yet
+  await loadItemsDB();
+
+  if (ITEMS_DB && ITEMS_DB[code]) {
+    const desc = ITEMS_DB[code];
+    ITEM_CACHE[code] = desc;
+    selectedItem = { code, desc };
+    descEl.value = desc;
+    descEl.style.color = 'var(--success)';
+  } else {
+    selectedItem = null;
+    descEl.value = '⚠️ ไม่พบรหัสสินค้านี้ในระบบ';
+    descEl.style.color = 'var(--danger)';
+  }
 }
 
 function handleItemKey(e) {
-  if (e.key === 'Escape') document.getElementById('itemDropdown').style.display = 'none';
-}
-
-document.addEventListener('click', e => {
-  if (!e.target.closest('.item-lookup-wrap')) {
-    document.getElementById('itemDropdown').style.display = 'none';
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const val = document.getElementById('eItem').value.trim();
+    if (val) lookupItem(val);
   }
-});
+}
 
 // ===== GENERATE ID =====
 function genId() {
@@ -1309,7 +1520,9 @@ async function submitEntry() {
   }
   if (qty < 1) { showToast('⚠️ จำนวนต้องมากกว่า 0'); return; }
 
-  const itemDesc = selectedItem?.desc || '';
+  // Get desc from field (may have been typed without selecting)
+  const rawDesc = document.getElementById('eDesc').value.replace(/\s*\(฿[\d.]+\)\s*$/, '').trim();
+  const itemDesc = selectedItem?.desc || (rawDesc.startsWith('⚠️') || rawDesc.startsWith('กำลัง') ? '' : rawDesc);
 
   const rec = {
     seq: Date.now(),
@@ -1342,8 +1555,9 @@ async function submitEntry() {
   document.getElementById('eAisle').value = '';
   document.getElementById('eBay').value = '';
   document.getElementById('eItem').value = '';
+  document.getElementById('eDesc').value = '';
+  document.getElementById('eDesc').style.color = '';
   document.getElementById('eQty').value = '';
-  document.getElementById('itemDescDisplay').classList.remove('show');
   selectedItem = null;
   loadMyEntries();
 }
@@ -1356,9 +1570,15 @@ async function loadMyEntries() {
   let records = {};
   if (firebaseOK) {
     try {
-      const snap = await db.ref('transfers').orderByChild('createdBy').equalTo(currentUser.username).limitToLast(50).get();
-      if (snap.exists()) records = snap.val();
-    } catch(e) { console.error(e); }
+      // Fetch all, filter by createdBy in JS to avoid index issues
+      const snap = await db.ref('transfers').limitToLast(200).get();
+      if (snap.exists()) {
+        snap.forEach(c => {
+          const v = c.val();
+          if (v.createdBy === currentUser.username) records[c.key] = v;
+        });
+      }
+    } catch(e) { console.error('loadMyEntries error:', e); }
   } else {
     const local = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
     Object.entries(local).forEach(([k,v]) => { if (v.createdBy === currentUser.username) records[k] = v; });
@@ -1375,14 +1595,15 @@ async function loadMyEntries() {
   tbody.innerHTML = arr.map((r,i) => `
     <tr>
       <td class="mono">${i+1}</td>
-      <td style="font-size:.8rem;">${formatDate(r.date)}</td>
+      <td style="font-size:.78rem;white-space:nowrap;">${formatDate(r.date)}</td>
       <td class="mono">${r.aisle}</td>
       <td class="mono">${r.bay}</td>
-      <td class="mono">${r.itemCode}</td>
-      <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.itemDesc}">${r.itemDesc||'—'}</td>
+      <td class="mono" style="font-weight:600;">${r.itemCode}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${r.itemDesc}">${r.itemDesc||'—'}</td>
       <td class="mono" style="font-weight:700;color:var(--accent);">${r.qty}</td>
       <td>${r.requester}</td>
       <td>${badgeHTML(r.status)}</td>
+      <td style="font-size:.78rem;color:var(--danger);">${r.rejectReason||''}</td>
     </tr>
   `).join('');
 }
@@ -1395,15 +1616,30 @@ async function loadPendingEntries() {
   let records = {};
   if (firebaseOK) {
     try {
-      const snap = await db.ref('transfers').orderByChild('status').equalTo('pending').get();
-      if (snap.exists()) records = snap.val();
-    } catch(e) { console.error(e); }
+      // Fetch all recent transfers, filter pending in JS (avoids Firebase index requirement)
+      const snap = await db.ref('transfers').limitToLast(500).get();
+      if (snap.exists()) {
+        snap.forEach(c => {
+          const v = c.val();
+          if (v.status === 'pending') records[c.key] = v;
+        });
+      }
+    } catch(e) {
+      console.error('loadPending error:', e);
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">❌</div><div class="empty-text">โหลดไม่สำเร็จ: ' + e.message + '</div></div>';
+      return;
+    }
   } else {
     const local = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
     Object.entries(local).forEach(([k,v]) => { if (v.status === 'pending') records[k] = v; });
   }
 
-  pendingCache = Object.entries(records).map(([k,v]) => ({ id:k, ...v })).sort((a,b) => b.date - a.date);
+  let arr = Object.entries(records).map(([k,v]) => ({ id:k, ...v }));
+  // SGM: filter to own branch only
+  if (currentUser.role === 'sgm' && currentUser.branchId) {
+    arr = arr.filter(r => String(r.branchId) === String(currentUser.branchId));
+  }
+  pendingCache = arr.sort((a,b) => b.date - a.date);
   updatePendingBadge(pendingCache.length);
   renderPendingList(pendingCache);
 }
@@ -1502,7 +1738,12 @@ async function loadAllRecords() {
     records = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
   }
 
-  allRecordsCache = Object.entries(records).map(([k,v]) => ({ id:k, ...v })).sort((a,b) => b.date - a.date);
+  let arr2 = Object.entries(records).map(([k,v]) => ({ id:k, ...v }));
+  // SGM: own branch only; Store: own branch only; Admin: all
+  if (currentUser.role !== 'admin' && currentUser.branchId) {
+    arr2 = arr2.filter(r => String(r.branchId) === String(currentUser.branchId));
+  }
+  allRecordsCache = arr2.sort((a,b) => b.date - a.date);
   renderAllRecords(allRecordsCache);
 }
 
@@ -1694,28 +1935,99 @@ async function deleteUser(userId) {
 async function initDefaultUsersInFirebase() {
   if (!firebaseOK) return;
   try {
-    const snap = await db.ref('users').limitToFirst(1).get();
+    const snap = await db.ref('users/admin').get();
     if (!snap.exists()) {
-      for (const [k,v] of Object.entries(DEFAULT_USERS)) {
-        await db.ref('users/' + k).set(v);
+      showToast('⏳ กำลังสร้าง Users ทั้งหมด...');
+      // Write in batches to avoid timeout
+      const entries = Object.entries(DEFAULT_USERS);
+      const BATCH = 20;
+      for (let i = 0; i < entries.length; i += BATCH) {
+        const batch = entries.slice(i, i + BATCH);
+        const updates = {};
+        batch.forEach(([k,v]) => { updates['users/' + k] = v; });
+        await db.ref().update(updates);
       }
+      showToast('✅ สร้าง Users ครบ ' + entries.length + ' accounts');
     }
-  } catch(e) {}
+  } catch(e) { console.error('initDefaultUsers error:', e); }
 }
 
-// ===== EXPORT CSV =====
-function exportCSV() {
-  const rows = [['#','วันที่','สาขา','AISLE','BAY','Item No.','รายการ','QTY','ผู้เบิก','ผู้ตรวจ','สถานะ']];
-  allRecordsCache.forEach((r,i) => {
-    rows.push([i+1, formatDate(r.date), r.branchName||r.branchId||'', r.aisle, r.bay, r.itemCode, r.itemDesc||'', r.qty, r.requester, r.checker||'', r.status]);
+// ===== EXPORT EXCEL (Admin) =====
+async function exportExcel() {
+  if (currentUser.role !== 'admin') { showToast('⚠️ เฉพาะ Admin เท่านั้น'); return; }
+  showToast('⏳ กำลัง Export...');
+
+  // Reload all records fresh
+  let records = {};
+  if (firebaseOK) {
+    try {
+      const snap = await db.ref('transfers').limitToLast(5000).get();
+      if (snap.exists()) records = snap.val();
+    } catch(e) { console.error(e); }
+  } else {
+    records = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
+  }
+  const arr = Object.entries(records).map(([k,v]) => ({ id:k, ...v })).sort((a,b) => b.date - a.date);
+
+  // Build worksheet data
+  const wsData = [
+    ['#', 'วันที่/เวลา', 'สาขา', 'AISLE', 'BAY', 'Item No.', 'DESC รายการ', 'QTY', 'ผู้เบิก', 'ผู้ตรวจ/SGM', 'สถานะ', 'หมายเหตุ']
+  ];
+  arr.forEach((r, i) => {
+    const status = r.status === 'approved' ? 'อนุมัติแล้ว' : r.status === 'rejected' ? 'ปฏิเสธ' : 'รออนุมัติ';
+    wsData.push([
+      i + 1,
+      formatDate(r.date),
+      r.branchName || ('สาขา ' + (r.branchId || 'กลาง')),
+      r.aisle || '',
+      r.bay || '',
+      r.itemCode || '',
+      r.itemDesc || '',
+      r.qty || 0,
+      r.requester || '',
+      r.checker || '',
+      status,
+      r.rejectReason || ''
+    ]);
   });
-  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
-  const blob = new Blob(['\uFEFF'+csv], { type:'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = 'transfer_records_' + new Date().toISOString().slice(0,10) + '.csv';
-  a.click(); URL.revokeObjectURL(url);
-  showToast('⬇️ Export CSV สำเร็จ');
+
+  // Summary by branch
+  const branchSummary = {};
+  arr.forEach(r => {
+    const bn = r.branchName || ('สาขา ' + (r.branchId || 'กลาง'));
+    if (!branchSummary[bn]) branchSummary[bn] = { total: 0, pending: 0, approved: 0, rejected: 0 };
+    branchSummary[bn].total++;
+    if (r.status === 'pending') branchSummary[bn].pending++;
+    else if (r.status === 'approved') branchSummary[bn].approved++;
+    else if (r.status === 'rejected') branchSummary[bn].rejected++;
+  });
+  const summaryData = [
+    ['สาขา', 'รายการทั้งหมด', 'รออนุมัติ', 'อนุมัติแล้ว', 'ปฏิเสธ'],
+    ...Object.entries(branchSummary).map(([bn, s]) => [bn, s.total, s.pending, s.approved, s.rejected])
+  ];
+
+  // Create workbook
+  const wb = typeof XLSX !== 'undefined' ? XLSX.utils.book_new() : null;
+  if (!wb) { showToast('❌ ไม่พบ SheetJS library'); return; }
+
+  // Sheet 1: All records
+  const ws1 = XLSX.utils.aoa_to_sheet(wsData);
+  // Column widths
+  ws1['!cols'] = [
+    {wch:4},{wch:18},{wch:20},{wch:8},{wch:8},{wch:12},{wch:40},{wch:8},{wch:14},{wch:16},{wch:12},{wch:20}
+  ];
+  // Style header row (bold via SheetJS CE - limited)
+  XLSX.utils.book_append_sheet(wb, ws1, 'รายการทั้งหมด');
+
+  // Sheet 2: Summary by branch
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws2['!cols'] = [{wch:24},{wch:16},{wch:12},{wch:14},{wch:10}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'สรุปรายสาขา');
+
+  // Download
+  const today = new Date().toISOString().slice(0, 10);
+  XLSX.writeFile(wb, 'TransferSystem_' + today + '.xlsx');
+  showToast('✅ Export Excel สำเร็จ ' + arr.length + ' รายการ');
 }
 
 // ===== MODAL HELPERS =====
