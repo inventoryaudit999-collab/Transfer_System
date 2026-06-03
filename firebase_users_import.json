@@ -1239,6 +1239,76 @@
       "password": "store089",
       "branchId": 89
     },
+    "sgm091": {
+      "username": "sgm091",
+      "displayName": "SGM สยามโฟรเซ่น สาขาตลาดเมืองใหม่ 91",
+      "role": "sgm",
+      "password": "sgm091",
+      "branchId": 91
+    },
+    "store091": {
+      "username": "store091",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาตลาดเมืองใหม่ 91",
+      "role": "store",
+      "password": "store091",
+      "branchId": 91
+    },
+    "sgm092": {
+      "username": "sgm092",
+      "displayName": "SGM สยามโฟรเซ่น สาขาอุดรธานี 92",
+      "role": "sgm",
+      "password": "sgm092",
+      "branchId": 92
+    },
+    "store092": {
+      "username": "store092",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาอุดรธานี 92",
+      "role": "store",
+      "password": "store092",
+      "branchId": 92
+    },
+    "sgm093": {
+      "username": "sgm093",
+      "displayName": "SGM สยามโฟรเซ่น สาขาทุ่งสง 93",
+      "role": "sgm",
+      "password": "sgm093",
+      "branchId": 93
+    },
+    "store093": {
+      "username": "store093",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาทุ่งสง 93",
+      "role": "store",
+      "password": "store093",
+      "branchId": 93
+    },
+    "sgm094": {
+      "username": "sgm094",
+      "displayName": "SGM สยามโฟรเซ่น สาขาตลาดย่าโม 94",
+      "role": "sgm",
+      "password": "sgm094",
+      "branchId": 94
+    },
+    "store094": {
+      "username": "store094",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาตลาดย่าโม 94",
+      "role": "store",
+      "password": "store094",
+      "branchId": 94
+    },
+    "sgm095": {
+      "username": "sgm095",
+      "displayName": "SGM สยามโฟรเซ่น สาขาศรีราชา 95",
+      "role": "sgm",
+      "password": "sgm095",
+      "branchId": 95
+    },
+    "store095": {
+      "username": "store095",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาศรีราชา 95",
+      "role": "store",
+      "password": "store095",
+      "branchId": 95
+    },
     "sgm096": {
       "username": "sgm096",
       "displayName": "SGM ทาวน์อินทาวน์ 96",
@@ -1252,6 +1322,34 @@
       "role": "store",
       "password": "store096",
       "branchId": 96
+    },
+    "sgm097": {
+      "username": "sgm097",
+      "displayName": "SGM สยามโฟรเซ่น สาขาถนนจันทน์ 97",
+      "role": "sgm",
+      "password": "sgm097",
+      "branchId": 97
+    },
+    "store097": {
+      "username": "store097",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาถนนจันทน์ 97",
+      "role": "store",
+      "password": "store097",
+      "branchId": 97
+    },
+    "sgm098": {
+      "username": "sgm098",
+      "displayName": "SGM สยามโฟรเซ่น สาขาตลาดนานาเจริญ 98",
+      "role": "sgm",
+      "password": "sgm098",
+      "branchId": 98
+    },
+    "store098": {
+      "username": "store098",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาตลาดนานาเจริญ 98",
+      "role": "store",
+      "password": "store098",
+      "branchId": 98
     },
     "sgm100": {
       "username": "sgm100",
@@ -2289,6 +2387,20 @@
       "password": "store175",
       "branchId": 175
     },
+    "sgm300": {
+      "username": "sgm300",
+      "displayName": "SGM สยามโฟรเซ่น สาขาตลาดวงศกร 300",
+      "role": "sgm",
+      "password": "sgm300",
+      "branchId": 300
+    },
+    "store300": {
+      "username": "store300",
+      "displayName": "สาขาสยามโฟรเซ่น สาขาตลาดวงศกร 300",
+      "role": "store",
+      "password": "store300",
+      "branchId": 300
+    },
     "sgm301": {
       "username": "sgm301",
       "displayName": "SGM พระราม4 301",
@@ -2303,6 +2415,20 @@
       "password": "store301",
       "branchId": 301
     },
+    "sgm302": {
+      "username": "sgm302",
+      "displayName": "SGM ทองหล่อ 302",
+      "role": "sgm",
+      "password": "sgm302",
+      "branchId": 302
+    },
+    "store302": {
+      "username": "store302",
+      "displayName": "สาขาทองหล่อ 302",
+      "role": "store",
+      "password": "store302",
+      "branchId": 302
+    },
     "sgm303": {
       "username": "sgm303",
       "displayName": "SGM ศิริมังคลาจารย์ 303",
@@ -2316,6 +2442,90 @@
       "role": "store",
       "password": "store303",
       "branchId": 303
+    },
+    "sgm350": {
+      "username": "sgm350",
+      "displayName": "SGM รามอินทรา กม.4 350",
+      "role": "sgm",
+      "password": "sgm350",
+      "branchId": 350
+    },
+    "store350": {
+      "username": "store350",
+      "displayName": "สาขารามอินทรา กม.4 350",
+      "role": "store",
+      "password": "store350",
+      "branchId": 350
+    },
+    "sgm351": {
+      "username": "sgm351",
+      "displayName": "SGM ซิโนพาร์ค 351",
+      "role": "sgm",
+      "password": "sgm351",
+      "branchId": 351
+    },
+    "store351": {
+      "username": "store351",
+      "displayName": "สาขาซิโนพาร์ค 351",
+      "role": "store",
+      "password": "store351",
+      "branchId": 351
+    },
+    "sgm352": {
+      "username": "sgm352",
+      "displayName": "SGM พัฒนาการ 352",
+      "role": "sgm",
+      "password": "sgm352",
+      "branchId": 352
+    },
+    "store352": {
+      "username": "store352",
+      "displayName": "สาขาพัฒนาการ 352",
+      "role": "store",
+      "password": "store352",
+      "branchId": 352
+    },
+    "sgm528": {
+      "username": "sgm528",
+      "displayName": "SGM แจ้งวัฒนะ (528) 528",
+      "role": "sgm",
+      "password": "sgm528",
+      "branchId": 528
+    },
+    "store528": {
+      "username": "store528",
+      "displayName": "สาขาแจ้งวัฒนะ (528) 528",
+      "role": "store",
+      "password": "store528",
+      "branchId": 528
+    },
+    "sgm801": {
+      "username": "sgm801",
+      "displayName": "SGM แจ้งวัฒนะ (801) 801",
+      "role": "sgm",
+      "password": "sgm801",
+      "branchId": 801
+    },
+    "store801": {
+      "username": "store801",
+      "displayName": "สาขาแจ้งวัฒนะ (801) 801",
+      "role": "store",
+      "password": "store801",
+      "branchId": 801
+    },
+    "sgm804": {
+      "username": "sgm804",
+      "displayName": "SGM บางบอน (804) 804",
+      "role": "sgm",
+      "password": "sgm804",
+      "branchId": 804
+    },
+    "store804": {
+      "username": "store804",
+      "displayName": "สาขาบางบอน (804) 804",
+      "role": "store",
+      "password": "store804",
+      "branchId": 804
     }
   }
 }
