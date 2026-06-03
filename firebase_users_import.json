@@ -1378,6 +1378,944 @@
       "role": "store",
       "password": "store108",
       "branchId": 108
+    },
+    "sgm109": {
+      "username": "sgm109",
+      "displayName": "SGM แหลมฉบัง 109",
+      "role": "sgm",
+      "password": "sgm109",
+      "branchId": 109
+    },
+    "store109": {
+      "username": "store109",
+      "displayName": "สาขาแหลมฉบัง 109",
+      "role": "store",
+      "password": "store109",
+      "branchId": 109
+    },
+    "sgm110": {
+      "username": "sgm110",
+      "displayName": "SGM ประจวบคีรีขันธ์ 110",
+      "role": "sgm",
+      "password": "sgm110",
+      "branchId": 110
+    },
+    "store110": {
+      "username": "store110",
+      "displayName": "สาขาประจวบคีรีขันธ์ 110",
+      "role": "store",
+      "password": "store110",
+      "branchId": 110
+    },
+    "sgm111": {
+      "username": "sgm111",
+      "displayName": "SGM เพชรเกษม 111",
+      "role": "sgm",
+      "password": "sgm111",
+      "branchId": 111
+    },
+    "store111": {
+      "username": "store111",
+      "displayName": "สาขาเพชรเกษม 111",
+      "role": "store",
+      "password": "store111",
+      "branchId": 111
+    },
+    "sgm112": {
+      "username": "sgm112",
+      "displayName": "SGM บางปู 112",
+      "role": "sgm",
+      "password": "sgm112",
+      "branchId": 112
+    },
+    "store112": {
+      "username": "store112",
+      "displayName": "สาขาบางปู 112",
+      "role": "store",
+      "password": "store112",
+      "branchId": 112
+    },
+    "sgm113": {
+      "username": "sgm113",
+      "displayName": "SGM วังหิน 113",
+      "role": "sgm",
+      "password": "sgm113",
+      "branchId": 113
+    },
+    "store113": {
+      "username": "store113",
+      "displayName": "สาขาวังหิน 113",
+      "role": "store",
+      "password": "store113",
+      "branchId": 113
+    },
+    "sgm114": {
+      "username": "sgm114",
+      "displayName": "SGM สิงห์บุรี 114",
+      "role": "sgm",
+      "password": "sgm114",
+      "branchId": 114
+    },
+    "store114": {
+      "username": "store114",
+      "displayName": "สาขาสิงห์บุรี 114",
+      "role": "store",
+      "password": "store114",
+      "branchId": 114
+    },
+    "sgm115": {
+      "username": "sgm115",
+      "displayName": "SGM บางบัวทอง 115",
+      "role": "sgm",
+      "password": "sgm115",
+      "branchId": 115
+    },
+    "store115": {
+      "username": "store115",
+      "displayName": "สาขาบางบัวทอง 115",
+      "role": "store",
+      "password": "store115",
+      "branchId": 115
+    },
+    "sgm116": {
+      "username": "sgm116",
+      "displayName": "SGM กาฬสินธุ์ 116",
+      "role": "sgm",
+      "password": "sgm116",
+      "branchId": 116
+    },
+    "store116": {
+      "username": "store116",
+      "displayName": "สาขากาฬสินธุ์ 116",
+      "role": "store",
+      "password": "store116",
+      "branchId": 116
+    },
+    "sgm117": {
+      "username": "sgm117",
+      "displayName": "SGM อุดมสุข 117",
+      "role": "sgm",
+      "password": "sgm117",
+      "branchId": 117
+    },
+    "store117": {
+      "username": "store117",
+      "displayName": "สาขาอุดมสุข 117",
+      "role": "store",
+      "password": "store117",
+      "branchId": 117
+    },
+    "sgm118": {
+      "username": "sgm118",
+      "displayName": "SGM รามคำแหง(สัมมากร) 118",
+      "role": "sgm",
+      "password": "sgm118",
+      "branchId": 118
+    },
+    "store118": {
+      "username": "store118",
+      "displayName": "สาขารามคำแหง(สัมมากร) 118",
+      "role": "store",
+      "password": "store118",
+      "branchId": 118
+    },
+    "sgm119": {
+      "username": "sgm119",
+      "displayName": "SGM พิจิตร 119",
+      "role": "sgm",
+      "password": "sgm119",
+      "branchId": 119
+    },
+    "store119": {
+      "username": "store119",
+      "displayName": "สาขาพิจิตร 119",
+      "role": "store",
+      "password": "store119",
+      "branchId": 119
+    },
+    "sgm120": {
+      "username": "sgm120",
+      "displayName": "SGM ปทุมธานี 120",
+      "role": "sgm",
+      "password": "sgm120",
+      "branchId": 120
+    },
+    "store120": {
+      "username": "store120",
+      "displayName": "สาขาปทุมธานี 120",
+      "role": "store",
+      "password": "store120",
+      "branchId": 120
+    },
+    "sgm121": {
+      "username": "sgm121",
+      "displayName": "SGM บดินทรเดชา 121",
+      "role": "sgm",
+      "password": "sgm121",
+      "branchId": 121
+    },
+    "store121": {
+      "username": "store121",
+      "displayName": "สาขาบดินทรเดชา 121",
+      "role": "store",
+      "password": "store121",
+      "branchId": 121
+    },
+    "sgm122": {
+      "username": "sgm122",
+      "displayName": "SGM ประชาอุทิศ 122",
+      "role": "sgm",
+      "password": "sgm122",
+      "branchId": 122
+    },
+    "store122": {
+      "username": "store122",
+      "displayName": "สาขาประชาอุทิศ 122",
+      "role": "store",
+      "password": "store122",
+      "branchId": 122
+    },
+    "sgm123": {
+      "username": "sgm123",
+      "displayName": "SGM สุขุมวิท71 123",
+      "role": "sgm",
+      "password": "sgm123",
+      "branchId": 123
+    },
+    "store123": {
+      "username": "store123",
+      "displayName": "สาขาสุขุมวิท71 123",
+      "role": "store",
+      "password": "store123",
+      "branchId": 123
+    },
+    "sgm124": {
+      "username": "sgm124",
+      "displayName": "SGM นวมินทร์70 124",
+      "role": "sgm",
+      "password": "sgm124",
+      "branchId": 124
+    },
+    "store124": {
+      "username": "store124",
+      "displayName": "สาขานวมินทร์70 124",
+      "role": "store",
+      "password": "store124",
+      "branchId": 124
+    },
+    "sgm125": {
+      "username": "sgm125",
+      "displayName": "SGM ชะอำ 125",
+      "role": "sgm",
+      "password": "sgm125",
+      "branchId": 125
+    },
+    "store125": {
+      "username": "store125",
+      "displayName": "สาขาชะอำ 125",
+      "role": "store",
+      "password": "store125",
+      "branchId": 125
+    },
+    "sgm126": {
+      "username": "sgm126",
+      "displayName": "SGM อ่อนนุช 126",
+      "role": "sgm",
+      "password": "sgm126",
+      "branchId": 126
+    },
+    "store126": {
+      "username": "store126",
+      "displayName": "สาขาอ่อนนุช 126",
+      "role": "store",
+      "password": "store126",
+      "branchId": 126
+    },
+    "sgm127": {
+      "username": "sgm127",
+      "displayName": "SGM สุขสวัสดิ์ 127",
+      "role": "sgm",
+      "password": "sgm127",
+      "branchId": 127
+    },
+    "store127": {
+      "username": "store127",
+      "displayName": "สาขาสุขสวัสดิ์ 127",
+      "role": "store",
+      "password": "store127",
+      "branchId": 127
+    },
+    "sgm128": {
+      "username": "sgm128",
+      "displayName": "SGM กบินทร์บุรี 128",
+      "role": "sgm",
+      "password": "sgm128",
+      "branchId": 128
+    },
+    "store128": {
+      "username": "store128",
+      "displayName": "สาขากบินทร์บุรี 128",
+      "role": "store",
+      "password": "store128",
+      "branchId": 128
+    },
+    "sgm129": {
+      "username": "sgm129",
+      "displayName": "SGM ลาดกระบัง 129",
+      "role": "sgm",
+      "password": "sgm129",
+      "branchId": 129
+    },
+    "store129": {
+      "username": "store129",
+      "displayName": "สาขาลาดกระบัง 129",
+      "role": "store",
+      "password": "store129",
+      "branchId": 129
+    },
+    "sgm130": {
+      "username": "sgm130",
+      "displayName": "SGM นาทองเจริญ 130",
+      "role": "sgm",
+      "password": "sgm130",
+      "branchId": 130
+    },
+    "store130": {
+      "username": "store130",
+      "displayName": "สาขานาทองเจริญ 130",
+      "role": "store",
+      "password": "store130",
+      "branchId": 130
+    },
+    "sgm131": {
+      "username": "sgm131",
+      "displayName": "SGM บ่อวิน 131",
+      "role": "sgm",
+      "password": "sgm131",
+      "branchId": 131
+    },
+    "store131": {
+      "username": "store131",
+      "displayName": "สาขาบ่อวิน 131",
+      "role": "store",
+      "password": "store131",
+      "branchId": 131
+    },
+    "sgm132": {
+      "username": "sgm132",
+      "displayName": "SGM สัตหีบ 132",
+      "role": "sgm",
+      "password": "sgm132",
+      "branchId": 132
+    },
+    "store132": {
+      "username": "store132",
+      "displayName": "สาขาสัตหีบ 132",
+      "role": "store",
+      "password": "store132",
+      "branchId": 132
+    },
+    "sgm133": {
+      "username": "sgm133",
+      "displayName": "SGM รามคำแหง24 133",
+      "role": "sgm",
+      "password": "sgm133",
+      "branchId": 133
+    },
+    "store133": {
+      "username": "store133",
+      "displayName": "สาขารามคำแหง24 133",
+      "role": "store",
+      "password": "store133",
+      "branchId": 133
+    },
+    "sgm134": {
+      "username": "sgm134",
+      "displayName": "SGM อมตะนคร 134",
+      "role": "sgm",
+      "password": "sgm134",
+      "branchId": 134
+    },
+    "store134": {
+      "username": "store134",
+      "displayName": "สาขาอมตะนคร 134",
+      "role": "store",
+      "password": "store134",
+      "branchId": 134
+    },
+    "sgm135": {
+      "username": "sgm135",
+      "displayName": "SGM บางคอแหลม 135",
+      "role": "sgm",
+      "password": "sgm135",
+      "branchId": 135
+    },
+    "store135": {
+      "username": "store135",
+      "displayName": "สาขาบางคอแหลม 135",
+      "role": "store",
+      "password": "store135",
+      "branchId": 135
+    },
+    "sgm136": {
+      "username": "sgm136",
+      "displayName": "SGM ขอนแก่น2 136",
+      "role": "sgm",
+      "password": "sgm136",
+      "branchId": 136
+    },
+    "store136": {
+      "username": "store136",
+      "displayName": "สาขาขอนแก่น2 136",
+      "role": "store",
+      "password": "store136",
+      "branchId": 136
+    },
+    "sgm137": {
+      "username": "sgm137",
+      "displayName": "SGM วงศกร2 137",
+      "role": "sgm",
+      "password": "sgm137",
+      "branchId": 137
+    },
+    "store137": {
+      "username": "store137",
+      "displayName": "สาขาวงศกร2 137",
+      "role": "store",
+      "password": "store137",
+      "branchId": 137
+    },
+    "sgm138": {
+      "username": "sgm138",
+      "displayName": "SGM เหม่งจ๋าย 138",
+      "role": "sgm",
+      "password": "sgm138",
+      "branchId": 138
+    },
+    "store138": {
+      "username": "store138",
+      "displayName": "สาขาเหม่งจ๋าย 138",
+      "role": "store",
+      "password": "store138",
+      "branchId": 138
+    },
+    "sgm139": {
+      "username": "sgm139",
+      "displayName": "SGM สุขุมวิท22 139",
+      "role": "sgm",
+      "password": "sgm139",
+      "branchId": 139
+    },
+    "store139": {
+      "username": "store139",
+      "displayName": "สาขาสุขุมวิท22 139",
+      "role": "store",
+      "password": "store139",
+      "branchId": 139
+    },
+    "sgm140": {
+      "username": "sgm140",
+      "displayName": "SGM ถนนจันทน์ 140",
+      "role": "sgm",
+      "password": "sgm140",
+      "branchId": 140
+    },
+    "store140": {
+      "username": "store140",
+      "displayName": "สาขาถนนจันทน์ 140",
+      "role": "store",
+      "password": "store140",
+      "branchId": 140
+    },
+    "sgm141": {
+      "username": "sgm141",
+      "displayName": "SGM ลำลูกกา 141",
+      "role": "sgm",
+      "password": "sgm141",
+      "branchId": 141
+    },
+    "store141": {
+      "username": "store141",
+      "displayName": "สาขาลำลูกกา 141",
+      "role": "store",
+      "password": "store141",
+      "branchId": 141
+    },
+    "sgm142": {
+      "username": "sgm142",
+      "displayName": "SGM แพรกษา 142",
+      "role": "sgm",
+      "password": "sgm142",
+      "branchId": 142
+    },
+    "store142": {
+      "username": "store142",
+      "displayName": "สาขาแพรกษา 142",
+      "role": "store",
+      "password": "store142",
+      "branchId": 142
+    },
+    "sgm143": {
+      "username": "sgm143",
+      "displayName": "SGM ประดิษฐ์มนูธรรม 143",
+      "role": "sgm",
+      "password": "sgm143",
+      "branchId": 143
+    },
+    "store143": {
+      "username": "store143",
+      "displayName": "สาขาประดิษฐ์มนูธรรม 143",
+      "role": "store",
+      "password": "store143",
+      "branchId": 143
+    },
+    "sgm144": {
+      "username": "sgm144",
+      "displayName": "SGM ตลาดรุ่งโรจน์(คลอง4) 144",
+      "role": "sgm",
+      "password": "sgm144",
+      "branchId": 144
+    },
+    "store144": {
+      "username": "store144",
+      "displayName": "สาขาตลาดรุ่งโรจน์(คลอง4) 144",
+      "role": "store",
+      "password": "store144",
+      "branchId": 144
+    },
+    "sgm145": {
+      "username": "sgm145",
+      "displayName": "SGM พงษ์เพชร 145",
+      "role": "sgm",
+      "password": "sgm145",
+      "branchId": 145
+    },
+    "store145": {
+      "username": "store145",
+      "displayName": "สาขาพงษ์เพชร 145",
+      "role": "store",
+      "password": "store145",
+      "branchId": 145
+    },
+    "sgm146": {
+      "username": "sgm146",
+      "displayName": "SGM อุตรดิตถ์ 146",
+      "role": "sgm",
+      "password": "sgm146",
+      "branchId": 146
+    },
+    "store146": {
+      "username": "store146",
+      "displayName": "สาขาอุตรดิตถ์ 146",
+      "role": "store",
+      "password": "store146",
+      "branchId": 146
+    },
+    "sgm147": {
+      "username": "sgm147",
+      "displayName": "SGM เมืองทอง 147",
+      "role": "sgm",
+      "password": "sgm147",
+      "branchId": 147
+    },
+    "store147": {
+      "username": "store147",
+      "displayName": "สาขาเมืองทอง 147",
+      "role": "store",
+      "password": "store147",
+      "branchId": 147
+    },
+    "sgm148": {
+      "username": "sgm148",
+      "displayName": "SGM เลียบคลอง2 148",
+      "role": "sgm",
+      "password": "sgm148",
+      "branchId": 148
+    },
+    "store148": {
+      "username": "store148",
+      "displayName": "สาขาเลียบคลอง2 148",
+      "role": "store",
+      "password": "store148",
+      "branchId": 148
+    },
+    "sgm149": {
+      "username": "sgm149",
+      "displayName": "SGM อ้อมน้อย 149",
+      "role": "sgm",
+      "password": "sgm149",
+      "branchId": 149
+    },
+    "store149": {
+      "username": "store149",
+      "displayName": "สาขาอ้อมน้อย 149",
+      "role": "store",
+      "password": "store149",
+      "branchId": 149
+    },
+    "sgm150": {
+      "username": "sgm150",
+      "displayName": "SGM สนามบินน้ำ 150",
+      "role": "sgm",
+      "password": "sgm150",
+      "branchId": 150
+    },
+    "store150": {
+      "username": "store150",
+      "displayName": "สาขาสนามบินน้ำ 150",
+      "role": "store",
+      "password": "store150",
+      "branchId": 150
+    },
+    "sgm151": {
+      "username": "sgm151",
+      "displayName": "SGM เทพรักษ์ 151",
+      "role": "sgm",
+      "password": "sgm151",
+      "branchId": 151
+    },
+    "store151": {
+      "username": "store151",
+      "displayName": "สาขาเทพรักษ์ 151",
+      "role": "store",
+      "password": "store151",
+      "branchId": 151
+    },
+    "sgm152": {
+      "username": "sgm152",
+      "displayName": "SGM สมุทรสงคราม 152",
+      "role": "sgm",
+      "password": "sgm152",
+      "branchId": 152
+    },
+    "store152": {
+      "username": "store152",
+      "displayName": "สาขาสมุทรสงคราม 152",
+      "role": "store",
+      "password": "store152",
+      "branchId": 152
+    },
+    "sgm153": {
+      "username": "sgm153",
+      "displayName": "SGM เวียงสระ 153",
+      "role": "sgm",
+      "password": "sgm153",
+      "branchId": 153
+    },
+    "store153": {
+      "username": "store153",
+      "displayName": "สาขาเวียงสระ 153",
+      "role": "store",
+      "password": "store153",
+      "branchId": 153
+    },
+    "sgm154": {
+      "username": "sgm154",
+      "displayName": "SGM ปราจีนบุรี 154",
+      "role": "sgm",
+      "password": "sgm154",
+      "branchId": 154
+    },
+    "store154": {
+      "username": "store154",
+      "displayName": "สาขาปราจีนบุรี 154",
+      "role": "store",
+      "password": "store154",
+      "branchId": 154
+    },
+    "sgm155": {
+      "username": "sgm155",
+      "displayName": "SGM ปิ่นเกล้า 155",
+      "role": "sgm",
+      "password": "sgm155",
+      "branchId": 155
+    },
+    "store155": {
+      "username": "store155",
+      "displayName": "สาขาปิ่นเกล้า 155",
+      "role": "store",
+      "password": "store155",
+      "branchId": 155
+    },
+    "sgm156": {
+      "username": "sgm156",
+      "displayName": "SGM สมุทรปราการ 156",
+      "role": "sgm",
+      "password": "sgm156",
+      "branchId": 156
+    },
+    "store156": {
+      "username": "store156",
+      "displayName": "สาขาสมุทรปราการ 156",
+      "role": "store",
+      "password": "store156",
+      "branchId": 156
+    },
+    "sgm157": {
+      "username": "sgm157",
+      "displayName": "SGM นครราชสีมา3 (เซฟวัน) 157",
+      "role": "sgm",
+      "password": "sgm157",
+      "branchId": 157
+    },
+    "store157": {
+      "username": "store157",
+      "displayName": "สาขานครราชสีมา3 (เซฟวัน) 157",
+      "role": "store",
+      "password": "store157",
+      "branchId": 157
+    },
+    "sgm158": {
+      "username": "sgm158",
+      "displayName": "SGM นครสวรรค์ 2 (พรหมนิมิต) 158",
+      "role": "sgm",
+      "password": "sgm158",
+      "branchId": 158
+    },
+    "store158": {
+      "username": "store158",
+      "displayName": "สาขานครสวรรค์ 2 (พรหมนิมิต) 158",
+      "role": "store",
+      "password": "store158",
+      "branchId": 158
+    },
+    "sgm159": {
+      "username": "sgm159",
+      "displayName": "SGM อุดรธานี 2 (บ้านเลื่อม) 159",
+      "role": "sgm",
+      "password": "sgm159",
+      "branchId": 159
+    },
+    "store159": {
+      "username": "store159",
+      "displayName": "สาขาอุดรธานี 2 (บ้านเลื่อม) 159",
+      "role": "store",
+      "password": "store159",
+      "branchId": 159
+    },
+    "sgm160": {
+      "username": "sgm160",
+      "displayName": "SGM มหาชัย 160",
+      "role": "sgm",
+      "password": "sgm160",
+      "branchId": 160
+    },
+    "store160": {
+      "username": "store160",
+      "displayName": "สาขามหาชัย 160",
+      "role": "store",
+      "password": "store160",
+      "branchId": 160
+    },
+    "sgm161": {
+      "username": "sgm161",
+      "displayName": "SGM ขอนแก่น3 (บ้านโนนม่วง) 161",
+      "role": "sgm",
+      "password": "sgm161",
+      "branchId": 161
+    },
+    "store161": {
+      "username": "store161",
+      "displayName": "สาขาขอนแก่น3 (บ้านโนนม่วง) 161",
+      "role": "store",
+      "password": "store161",
+      "branchId": 161
+    },
+    "sgm162": {
+      "username": "sgm162",
+      "displayName": "SGM อมตะนคร 2 162",
+      "role": "sgm",
+      "password": "sgm162",
+      "branchId": 162
+    },
+    "store162": {
+      "username": "store162",
+      "displayName": "สาขาอมตะนคร 2 162",
+      "role": "store",
+      "password": "store162",
+      "branchId": 162
+    },
+    "sgm163": {
+      "username": "sgm163",
+      "displayName": "SGM สงขลา 163",
+      "role": "sgm",
+      "password": "sgm163",
+      "branchId": 163
+    },
+    "store163": {
+      "username": "store163",
+      "displayName": "สาขาสงขลา 163",
+      "role": "store",
+      "password": "store163",
+      "branchId": 163
+    },
+    "sgm164": {
+      "username": "sgm164",
+      "displayName": "SGM ชัยนาท 164",
+      "role": "sgm",
+      "password": "sgm164",
+      "branchId": 164
+    },
+    "store164": {
+      "username": "store164",
+      "displayName": "สาขาชัยนาท 164",
+      "role": "store",
+      "password": "store164",
+      "branchId": 164
+    },
+    "sgm165": {
+      "username": "sgm165",
+      "displayName": "SGM ถนนศรีอยุธยา 165",
+      "role": "sgm",
+      "password": "sgm165",
+      "branchId": 165
+    },
+    "store165": {
+      "username": "store165",
+      "displayName": "สาขาถนนศรีอยุธยา 165",
+      "role": "store",
+      "password": "store165",
+      "branchId": 165
+    },
+    "sgm166": {
+      "username": "sgm166",
+      "displayName": "SGM ราไวย์ 2 166",
+      "role": "sgm",
+      "password": "sgm166",
+      "branchId": 166
+    },
+    "store166": {
+      "username": "store166",
+      "displayName": "สาขาราไวย์ 2 166",
+      "role": "store",
+      "password": "store166",
+      "branchId": 166
+    },
+    "sgm167": {
+      "username": "sgm167",
+      "displayName": "SGM เชียงใหม่ (จอมทอง) 167",
+      "role": "sgm",
+      "password": "sgm167",
+      "branchId": 167
+    },
+    "store167": {
+      "username": "store167",
+      "displayName": "สาขาเชียงใหม่ (จอมทอง) 167",
+      "role": "store",
+      "password": "store167",
+      "branchId": 167
+    },
+    "sgm168": {
+      "username": "sgm168",
+      "displayName": "SGM บ้านบึง (ชลบุรี) 168",
+      "role": "sgm",
+      "password": "sgm168",
+      "branchId": 168
+    },
+    "store168": {
+      "username": "store168",
+      "displayName": "สาขาบ้านบึง (ชลบุรี) 168",
+      "role": "store",
+      "password": "store168",
+      "branchId": 168
+    },
+    "sgm169": {
+      "username": "sgm169",
+      "displayName": "SGM พังงา 169",
+      "role": "sgm",
+      "password": "sgm169",
+      "branchId": 169
+    },
+    "store169": {
+      "username": "store169",
+      "displayName": "สาขาพังงา 169",
+      "role": "store",
+      "password": "store169",
+      "branchId": 169
+    },
+    "sgm170": {
+      "username": "sgm170",
+      "displayName": "SGM อำนาจเจริญ 170",
+      "role": "sgm",
+      "password": "sgm170",
+      "branchId": 170
+    },
+    "store170": {
+      "username": "store170",
+      "displayName": "สาขาอำนาจเจริญ 170",
+      "role": "store",
+      "password": "store170",
+      "branchId": 170
+    },
+    "sgm171": {
+      "username": "sgm171",
+      "displayName": "SGM จอหอ (นครราชสีมา) 171",
+      "role": "sgm",
+      "password": "sgm171",
+      "branchId": 171
+    },
+    "store171": {
+      "username": "store171",
+      "displayName": "สาขาจอหอ (นครราชสีมา) 171",
+      "role": "store",
+      "password": "store171",
+      "branchId": 171
+    },
+    "sgm172": {
+      "username": "sgm172",
+      "displayName": "SGM บ้านไผ่ 172",
+      "role": "sgm",
+      "password": "sgm172",
+      "branchId": 172
+    },
+    "store172": {
+      "username": "store172",
+      "displayName": "สาขาบ้านไผ่ 172",
+      "role": "store",
+      "password": "store172",
+      "branchId": 172
+    },
+    "sgm175": {
+      "username": "sgm175",
+      "displayName": "SGM แฮปปี้แทท (ฟอเรสเทียส์ - บางนา) 175",
+      "role": "sgm",
+      "password": "sgm175",
+      "branchId": 175
+    },
+    "store175": {
+      "username": "store175",
+      "displayName": "สาขาแฮปปี้แทท (ฟอเรสเทียส์ - บางนา) 175",
+      "role": "store",
+      "password": "store175",
+      "branchId": 175
+    },
+    "sgm301": {
+      "username": "sgm301",
+      "displayName": "SGM พระราม4 301",
+      "role": "sgm",
+      "password": "sgm301",
+      "branchId": 301
+    },
+    "store301": {
+      "username": "store301",
+      "displayName": "สาขาพระราม4 301",
+      "role": "store",
+      "password": "store301",
+      "branchId": 301
+    },
+    "sgm303": {
+      "username": "sgm303",
+      "displayName": "SGM ศิริมังคลาจารย์ 303",
+      "role": "sgm",
+      "password": "sgm303",
+      "branchId": 303
+    },
+    "store303": {
+      "username": "store303",
+      "displayName": "สาขาศิริมังคลาจารย์ 303",
+      "role": "store",
+      "password": "store303",
+      "branchId": 303
     }
   }
 }
