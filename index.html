@@ -1833,13 +1833,22 @@ function switchTab(id) {
 
 // ===== POPULATE BRANCH SELECTS =====
 function populateBranchSelects() {
-  const opts = Object.entries(BRANCHES).map(([k,v]) => `<option value="${k}">สาขา ${v}</option>`).join('');
+  // Sort branch IDs numerically (ascending)
+  const sortedEntries = Object.entries(BRANCHES)
+    .map(([k, v]) => [parseInt(k), v])
+    .sort((a, b) => a[0] - b[0]);
+
+  // Format: "001 - ลาดพร้าว"  so admin can type/search by number
+  const opts = sortedEntries
+    .map(([k, v]) => `<option value="${k}">${String(k).padStart(3,'0')} — ${v}</option>`)
+    .join('');
+
   const approveSel = document.getElementById('approveFilterBranch');
-  const recordSel = document.getElementById('recordFilterBranch');
-  const uBranch = document.getElementById('uBranch');
+  const recordSel  = document.getElementById('recordFilterBranch');
+  const uBranch    = document.getElementById('uBranch');
   if (approveSel) approveSel.innerHTML = '<option value="">— ทุกสาขา —</option>' + opts;
-  if (recordSel) recordSel.innerHTML = '<option value="">— ทุกสาขา —</option>' + opts;
-  if (uBranch) uBranch.innerHTML = '<option value="">— ระบบกลาง —</option>' + opts;
+  if (recordSel)  recordSel.innerHTML  = '<option value="">— ทุกสาขา —</option>' + opts;
+  if (uBranch)    uBranch.innerHTML    = '<option value="">— ระบบกลาง —</option>' + opts;
 }
 
 // ===== ITEM LOOKUP =====
@@ -2394,9 +2403,15 @@ async function initDefaultUsersInFirebase() {
 // ===== EXPORT EXCEL (Admin) =====
 async function exportExcel() {
   if (currentUser.role !== 'admin') { showToast('⚠️ เฉพาะ Admin เท่านั้น'); return; }
+
+  // Read current filter values from the Records tab
+  const searchQ      = (document.getElementById('recordSearch')?.value || '').toLowerCase().trim();
+  const filterStatus = document.getElementById('recordFilterStatus')?.value || '';
+  const filterBranch = document.getElementById('recordFilterBranch')?.value || '';
+
   showToast('⏳ กำลัง Export...');
 
-  // Reload all records fresh
+  // Always fetch fresh from Firebase for export
   let records = {};
   if (firebaseOK) {
     try {
@@ -2406,67 +2421,100 @@ async function exportExcel() {
   } else {
     records = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
   }
-  const arr = Object.entries(records).map(([k,v]) => ({ id:k, ...v })).sort((a,b) => b.date - a.date);
 
-  // Build worksheet data
-  const wsData = [
-    ['#', 'วันที่/เวลา', 'สาขา', 'AISLE', 'BAY', 'Item No.', 'DESC รายการ', 'QTY', 'ผู้เบิก', 'ผู้ตรวจ/SGM', 'สถานะ', 'หมายเหตุ']
-  ];
+  // Apply same filters as the current view
+  let arr = Object.entries(records)
+    .map(([k, v]) => ({ id: k, ...v }))
+    .sort((a, b) => b.date - a.date);
+
+  if (filterBranch) {
+    arr = arr.filter(r => String(r.branchId) === filterBranch);
+  }
+  if (filterStatus) {
+    arr = arr.filter(r => r.status === filterStatus);
+  }
+  if (searchQ) {
+    arr = arr.filter(r =>
+      (r.itemCode || '').includes(searchQ) ||
+      (r.itemDesc || '').toLowerCase().includes(searchQ) ||
+      (r.requester || '').toLowerCase().includes(searchQ)
+    );
+  }
+
+  if (arr.length === 0) { showToast('⚠️ ไม่มีรายการที่ตรงเงื่อนไข'); return; }
+
+  // Determine export scope label for sheet name & filename
+  const branchLabel = filterBranch
+    ? (String(filterBranch).padStart(3,'0') + '_' + (BRANCHES[filterBranch] || filterBranch))
+    : 'ทุกสาขา';
+  const statusLabel = filterStatus
+    ? (filterStatus === 'approved' ? 'อนุมัติ' : filterStatus === 'rejected' ? 'ปฏิเสธ' : 'รออนุมัติ')
+    : '';
+  const scopeLabel = [branchLabel, statusLabel].filter(Boolean).join('_');
+
+  // Build Sheet 1: Records
+  const colWidths = [4,18,20,8,8,12,42,8,14,16,12,22];
+  const headers = ['#','วันที่/เวลา','สาขา','AISLE','BAY','Item No.','DESC รายการ','QTY','ผู้เบิก','ผู้ตรวจ/SGM','สถานะ','หมายเหตุ'];
+  const wsData = [headers];
   arr.forEach((r, i) => {
     const status = r.status === 'approved' ? 'อนุมัติแล้ว' : r.status === 'rejected' ? 'ปฏิเสธ' : 'รออนุมัติ';
     wsData.push([
       i + 1,
       formatDate(r.date),
       r.branchName || ('สาขา ' + (r.branchId || 'กลาง')),
-      r.aisle || '',
-      r.bay || '',
+      r.aisle  || '',
+      r.bay    || '',
       r.itemCode || '',
       r.itemDesc || '',
-      r.qty || 0,
+      r.qty    || 0,
       r.requester || '',
-      r.checker || '',
+      r.checker   || '',
       status,
       r.rejectReason || ''
     ]);
   });
 
-  // Summary by branch
+  // Build Sheet 2: Summary by branch (of the filtered data)
   const branchSummary = {};
   arr.forEach(r => {
     const bn = r.branchName || ('สาขา ' + (r.branchId || 'กลาง'));
-    if (!branchSummary[bn]) branchSummary[bn] = { total: 0, pending: 0, approved: 0, rejected: 0 };
+    if (!branchSummary[bn]) branchSummary[bn] = { total:0, pending:0, approved:0, rejected:0 };
     branchSummary[bn].total++;
-    if (r.status === 'pending') branchSummary[bn].pending++;
+    if      (r.status === 'pending')  branchSummary[bn].pending++;
     else if (r.status === 'approved') branchSummary[bn].approved++;
     else if (r.status === 'rejected') branchSummary[bn].rejected++;
   });
   const summaryData = [
-    ['สาขา', 'รายการทั้งหมด', 'รออนุมัติ', 'อนุมัติแล้ว', 'ปฏิเสธ'],
-    ...Object.entries(branchSummary).map(([bn, s]) => [bn, s.total, s.pending, s.approved, s.rejected])
+    ['สาขา','รายการทั้งหมด','รออนุมัติ','อนุมัติแล้ว','ปฏิเสธ'],
+    ...Object.entries(branchSummary)
+      .sort((a,b) => a[0].localeCompare(b[0]))
+      .map(([bn, s]) => [bn, s.total, s.pending, s.approved, s.rejected])
   ];
 
-  // Create workbook
+  // Create workbook with SheetJS
   const wb = typeof XLSX !== 'undefined' ? XLSX.utils.book_new() : null;
   if (!wb) { showToast('❌ ไม่พบ SheetJS library'); return; }
 
-  // Sheet 1: All records
   const ws1 = XLSX.utils.aoa_to_sheet(wsData);
-  // Column widths
-  ws1['!cols'] = [
-    {wch:4},{wch:18},{wch:20},{wch:8},{wch:8},{wch:12},{wch:40},{wch:8},{wch:14},{wch:16},{wch:12},{wch:20}
-  ];
-  // Style header row (bold via SheetJS CE - limited)
-  XLSX.utils.book_append_sheet(wb, ws1, 'รายการทั้งหมด');
+  ws1['!cols'] = colWidths.map(w => ({ wch: w }));
+  // Bold header row by adding cell styles (SheetJS CE supports limited styling via s property)
+  headers.forEach((_, ci) => {
+    const cellRef = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (ws1[cellRef]) {
+      ws1[cellRef].s = { font: { bold: true }, fill: { fgColor: { rgb: 'DBEAFE' } } };
+    }
+  });
+  XLSX.utils.book_append_sheet(wb, ws1, 'รายการ');
 
-  // Sheet 2: Summary by branch
   const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
-  ws2['!cols'] = [{wch:24},{wch:16},{wch:12},{wch:14},{wch:10}];
-  XLSX.utils.book_append_sheet(wb, ws2, 'สรุปรายสาขา');
+  ws2['!cols'] = [{ wch:28 },{ wch:16 },{ wch:12 },{ wch:14 },{ wch:10 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'สรุป');
 
-  // Download
-  const today = new Date().toISOString().slice(0, 10);
-  XLSX.writeFile(wb, 'TransferSystem_' + today + '.xlsx');
-  showToast('✅ Export Excel สำเร็จ ' + arr.length + ' รายการ');
+  // File name: TransferSystem_สาขา113_2025-06-05.xlsx
+  const today    = new Date().toISOString().slice(0, 10);
+  const fileName = `Transfer_${scopeLabel}_${today}.xlsx`;
+  XLSX.writeFile(wb, fileName);
+  showToast(`✅ Export สำเร็จ ${arr.length} รายการ — ${scopeLabel}`);
 }
 
 // ===== MODAL HELPERS =====
