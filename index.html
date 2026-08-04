@@ -1354,6 +1354,71 @@ td {
       </div>
     </div>
 
+    <!-- ===== TAB: MY STATUS (ตรวจสอบสถานะการบันทึก) ===== -->
+    <div class="tab-view" id="tab-mystatus">
+      <div class="header-banner" style="background: linear-gradient(135deg, #0891B2 0%, #2563EB 100%);">
+        <h2>📊 ตรวจสอบสถานะการบันทึก</h2>
+        <p id="myStatusBranchLabel">สาขา: —</p>
+      </div>
+
+      <!-- Summary cards -->
+      <div class="stats-row" id="myStatusStats" style="margin-bottom:16px;">
+        <div class="stat-card"><div class="stat-num" id="msTotal">—</div><div class="stat-label">รายการทั้งหมด</div></div>
+        <div class="stat-card"><div class="stat-num" id="msPending" style="color:var(--pending);">—</div><div class="stat-label">รออนุมัติ</div></div>
+        <div class="stat-card"><div class="stat-num" id="msApproved" style="color:var(--success);">—</div><div class="stat-label">อนุมัติแล้ว</div></div>
+        <div class="stat-card"><div class="stat-num" id="msRejected" style="color:var(--danger);">—</div><div class="stat-label">ปฏิเสธ</div></div>
+      </div>
+
+      <div class="section-header">
+        <div class="section-title"><span>🗂️</span> รายการที่บันทึกเข้าระบบ</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn btn-outline btn-sm" onclick="exportMyStatusExcel()">📊 Export Excel</button>
+          <button class="btn btn-outline btn-sm" onclick="loadMyStatus()">🔄 รีเฟรช</button>
+        </div>
+      </div>
+      <div class="filter-row">
+        <input type="text" id="myStatusSearch" class="form-control" placeholder="🔍 ค้นหา Item / รายการ / ผู้เบิก..." oninput="filterMyStatus()" style="max-width:240px;">
+        <select class="form-control" id="myStatusFilterStatus" onchange="filterMyStatus()" style="max-width:160px;">
+          <option value="">— ทุกสถานะ —</option>
+          <option value="pending">⏳ รออนุมัติ</option>
+          <option value="approved">✅ อนุมัติแล้ว</option>
+          <option value="rejected">❌ ปฏิเสธ</option>
+        </select>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:.82rem;color:var(--text-muted);white-space:nowrap;">📅 จาก</span>
+          <input type="date" id="myStatusDateFrom" class="form-control" onchange="filterMyStatus()" style="max-width:160px;">
+          <span style="font-size:.82rem;color:var(--text-muted);">ถึง</span>
+          <input type="date" id="myStatusDateTo" class="form-control" onchange="filterMyStatus()" style="max-width:160px;">
+        </div>
+        <button class="btn btn-outline btn-sm" onclick="clearMyStatusDates()" title="ล้างช่วงวันที่">🧹 ล้างวันที่</button>
+      </div>
+      <div class="card" style="padding:0;">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>วันที่</th>
+                <th>สาขา</th>
+                <th>AISLE</th>
+                <th>BAY</th>
+                <th>Item No.</th>
+                <th>DESC รายการ</th>
+                <th>QTY</th>
+                <th>ผู้เบิก</th>
+                <th>ผู้ตรวจ/SGM</th>
+                <th>สถานะ</th>
+                <th>หมายเหตุ</th>
+              </tr>
+            </thead>
+            <tbody id="myStatusBody">
+              <tr><td colspan="12"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">ยังไม่มีรายการ</div></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <!-- ===== TAB: APPROVE (SGM / Admin) ===== -->
     <div class="tab-view" id="tab-approve">
       <div class="header-banner" style="background: linear-gradient(135deg, #D97706 0%, #B45309 100%);">
@@ -2467,6 +2532,7 @@ function buildTabs() {
 
   if (role === 'store' || role === 'sgm' || role === 'admin') {
     storeGroup.push({ id:'entry', icon:'📦', label:'บันทึกเบิก' });
+    storeGroup.push({ id:'mystatus', icon:'📊', label:'ตรวจสอบสถานะ' });
   }
   if (role === 'sgm' || role === 'admin') {
     sgmGroup.push({ id:'approve', icon:'⏳', label:'รออนุมัติ', badge: true });
@@ -2551,6 +2617,7 @@ function switchTab(id) {
   if (id === 'records') loadAllRecords();
   if (id === 'admin') { loadUsers(); loadAdminStats(); }
   if (id === 'entry') loadMyEntries();
+  if (id === 'mystatus') loadMyStatus();
   if (id === 'items') loadItemsTab();
   if (id === 'logstatus') initLogStatus();
 }
@@ -3290,6 +3357,229 @@ async function exportExcel() {
   const fileName = `Transfer_${scopeLabel}_${today}.xlsx`;
   XLSX.writeFile(wb, fileName);
   showToast(`✅ Export สำเร็จ ${arr.length} รายการ — ${scopeLabel}`);
+}
+
+// ===================================================================
+// ===== MY STATUS — ตรวจสอบสถานะการบันทึก (scoped to own store/branch)
+// ===================================================================
+let myStatusCache = [];
+
+// Return records visible to the current user, scoped to their own branch only.
+// - store: records created by their own username within their branch
+// - sgm  : all records within their branch
+// - admin: all records (kept for completeness, but admin already has full Export)
+async function fetchScopedRecords() {
+  let records = {};
+  if (firebaseOK) {
+    try {
+      let snap;
+      if (currentUser.branchId) {
+        snap = await db.ref('transfers')
+          .orderByChild('branchId')
+          .equalTo(currentUser.branchId)
+          .limitToLast(2000).get();
+      } else {
+        snap = await db.ref('transfers').limitToLast(2000).get();
+      }
+      if (snap.exists()) snap.forEach(c => { records[c.key] = c.val(); });
+    } catch (e) {
+      // Fallback without index
+      try {
+        const s2 = await db.ref('transfers').limitToLast(2000).get();
+        if (s2.exists()) s2.forEach(c => { records[c.key] = c.val(); });
+      } catch (e2) { console.error('fetchScopedRecords error:', e2); }
+    }
+  } else {
+    records = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
+  }
+
+  let arr = Object.entries(records).map(([k, v]) => ({ id: k, ...v }));
+
+  // Enforce scope in JS (defense-in-depth, and covers fallback paths)
+  if (currentUser.role === 'store' && currentUser.branchId) {
+    arr = arr.filter(r =>
+      String(r.branchId) === String(currentUser.branchId) &&
+      r.createdBy === currentUser.username
+    );
+  } else if (currentUser.role === 'sgm' && currentUser.branchId) {
+    arr = arr.filter(r => String(r.branchId) === String(currentUser.branchId));
+  }
+  return arr.sort((a, b) => b.date - a.date);
+}
+
+async function loadMyStatus() {
+  const tbody = document.getElementById('myStatusBody');
+  const label = document.getElementById('myStatusBranchLabel');
+  if (label) {
+    label.textContent = currentUser.branchId
+      ? 'สาขา: ' + (BRANCHES[currentUser.branchId] || currentUser.branchId)
+      : 'สาขา: ส่วนกลาง (ทุกสาขา)';
+  }
+  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:20px;">กำลังโหลด...</td></tr>';
+
+  myStatusCache = await fetchScopedRecords();
+  renderMyStatusStats(myStatusCache);
+  renderMyStatus(myStatusCache);
+}
+
+function renderMyStatusStats(arr) {
+  const s = { total: arr.length, pending: 0, approved: 0, rejected: 0 };
+  arr.forEach(r => {
+    if (r.status === 'pending') s.pending++;
+    else if (r.status === 'approved') s.approved++;
+    else if (r.status === 'rejected') s.rejected++;
+  });
+  const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+  set('msTotal', s.total);
+  set('msPending', s.pending);
+  set('msApproved', s.approved);
+  set('msRejected', s.rejected);
+}
+
+function renderMyStatus(arr) {
+  const tbody = document.getElementById('myStatusBody');
+  if (!arr.length) {
+    tbody.innerHTML = '<tr><td colspan="12"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">ไม่พบรายการที่ตรงเงื่อนไข</div></div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = arr.map((r, i) => `
+    <tr>
+      <td class="mono">${i + 1}</td>
+      <td style="font-size:.78rem;white-space:nowrap;">${formatDate(r.date)}</td>
+      <td style="font-size:.8rem;">${escHtml(r.branchName || ('สาขา ' + (r.branchId || 'กลาง')))}</td>
+      <td class="mono">${escHtml(r.aisle || '')}</td>
+      <td class="mono">${escHtml(r.bay || '')}</td>
+      <td class="mono" style="font-weight:600;">${escHtml(r.itemCode || '')}</td>
+      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escHtml(r.itemDesc || '')}">${escHtml(r.itemDesc || '—')}</td>
+      <td class="mono" style="font-weight:700;color:var(--accent);">${escHtml(String(r.qty || 0))}</td>
+      <td>${escHtml(r.requester || '')}</td>
+      <td style="font-size:.8rem;">${escHtml(r.checker || '—')}</td>
+      <td>${badgeHTML(r.status)}</td>
+      <td style="font-size:.78rem;color:var(--danger);">${escHtml(r.rejectReason || '')}</td>
+    </tr>
+  `).join('');
+}
+
+// Read the mystatus date-range inputs → {from, to} as ms timestamps (inclusive).
+// from = 00:00:00.000 of the "from" day; to = 23:59:59.999 of the "to" day.
+function getMyStatusDateRange() {
+  const fromStr = document.getElementById('myStatusDateFrom')?.value || '';
+  const toStr   = document.getElementById('myStatusDateTo')?.value || '';
+  let from = null, to = null;
+  if (fromStr) { const d = new Date(fromStr + 'T00:00:00'); if (!isNaN(d)) from = d.getTime(); }
+  if (toStr)   { const d = new Date(toStr   + 'T23:59:59.999'); if (!isNaN(d)) to = d.getTime(); }
+  return { from, to };
+}
+
+// Apply search + status + date-range filters to a record array (shared by view & export)
+function applyMyStatusFilters(arr) {
+  const q = (document.getElementById('myStatusSearch')?.value || '').toLowerCase().trim();
+  const fStat = document.getElementById('myStatusFilterStatus')?.value || '';
+  const { from, to } = getMyStatusDateRange();
+  return arr.filter(r =>
+    (!fStat || r.status === fStat) &&
+    (from == null || r.date >= from) &&
+    (to   == null || r.date <= to) &&
+    (!q ||
+      (r.itemCode || '').toLowerCase().includes(q) ||
+      (r.itemDesc || '').toLowerCase().includes(q) ||
+      (r.requester || '').toLowerCase().includes(q))
+  );
+}
+
+function clearMyStatusDates() {
+  const f = document.getElementById('myStatusDateFrom');
+  const t = document.getElementById('myStatusDateTo');
+  if (f) f.value = '';
+  if (t) t.value = '';
+  filterMyStatus();
+}
+
+function filterMyStatus() {
+  const filtered = applyMyStatusFilters(myStatusCache);
+  renderMyStatusStats(filtered);
+  renderMyStatus(filtered);
+}
+
+async function exportMyStatusExcel() {
+  if (typeof XLSX === 'undefined') { showToast('❌ ไม่พบ SheetJS library'); return; }
+  showToast('⏳ กำลัง Export...');
+
+  // Always re-fetch scoped data fresh, then apply the current filters (incl. date range)
+  let arr = await fetchScopedRecords();
+  arr = applyMyStatusFilters(arr);
+
+  if (arr.length === 0) { showToast('⚠️ ไม่มีรายการที่ตรงเงื่อนไข'); return; }
+
+  // Human-readable range label for the header / filename
+  const { from, to } = getMyStatusDateRange();
+  const fromStr = document.getElementById('myStatusDateFrom')?.value || '';
+  const toStr   = document.getElementById('myStatusDateTo')?.value || '';
+  let rangeLabel = 'ทั้งหมด';
+  if (fromStr && toStr) rangeLabel = fromStr + ' ถึง ' + toStr;
+  else if (fromStr)     rangeLabel = 'ตั้งแต่ ' + fromStr;
+  else if (toStr)       rangeLabel = 'ถึง ' + toStr;
+
+  const headers = ['#','วันที่/เวลา','สาขา','AISLE','BAY','Item No.','DESC รายการ','QTY','ผู้เบิก','ผู้ตรวจ/SGM','สถานะ','หมายเหตุ'];
+  const colWidths = [4,18,20,8,8,12,42,8,14,16,12,22];
+  const wsData = [headers];
+  arr.forEach((r, i) => {
+    const status = r.status === 'approved' ? 'อนุมัติแล้ว' : r.status === 'rejected' ? 'ปฏิเสธ' : 'รออนุมัติ';
+    wsData.push([
+      i + 1,
+      formatDate(r.date),
+      r.branchName || ('สาขา ' + (r.branchId || 'กลาง')),
+      r.aisle || '',
+      r.bay || '',
+      r.itemCode || '',
+      r.itemDesc || '',
+      r.qty || 0,
+      r.requester || '',
+      r.checker || '',
+      status,
+      r.rejectReason || ''
+    ]);
+  });
+
+  // Summary by status
+  const sm = { pending:0, approved:0, rejected:0 };
+  arr.forEach(r => { if (sm[r.status] !== undefined) sm[r.status]++; });
+  const branchName = currentUser.branchId ? (BRANCHES[currentUser.branchId] || ('สาขา ' + currentUser.branchId)) : 'ส่วนกลาง';
+  const summaryData = [
+    ['สาขา', branchName],
+    ['ช่วงวันที่', rangeLabel],
+    ['วันที่ Export', formatDate(Date.now())],
+    [],
+    ['สถานะ','จำนวน'],
+    ['รออนุมัติ', sm.pending],
+    ['อนุมัติแล้ว', sm.approved],
+    ['ปฏิเสธ', sm.rejected],
+    ['รวมทั้งหมด', arr.length]
+  ];
+
+  const wb = XLSX.utils.book_new();
+  const ws1 = XLSX.utils.aoa_to_sheet(wsData);
+  ws1['!cols'] = colWidths.map(w => ({ wch: w }));
+  headers.forEach((_, ci) => {
+    const ref = XLSX.utils.encode_cell({ r: 0, c: ci });
+    if (ws1[ref]) ws1[ref].s = { font: { bold: true }, fill: { fgColor: { rgb: 'DBEAFE' } } };
+  });
+  XLSX.utils.book_append_sheet(wb, ws1, 'รายการ');
+
+  const ws2 = XLSX.utils.aoa_to_sheet(summaryData);
+  ws2['!cols'] = [{ wch: 16 }, { wch: 24 }];
+  XLSX.utils.book_append_sheet(wb, ws2, 'สรุป');
+
+  const branchTag = currentUser.branchId
+    ? (String(currentUser.branchId).padStart(3, '0') + '_' + (BRANCHES[currentUser.branchId] || currentUser.branchId))
+    : 'ส่วนกลาง';
+  // Filename range suffix
+  let fileRange = new Date().toISOString().slice(0, 10);
+  if (fromStr && toStr) fileRange = fromStr + '_ถึง_' + toStr;
+  else if (fromStr)     fileRange = 'ตั้งแต่_' + fromStr;
+  else if (toStr)       fileRange = 'ถึง_' + toStr;
+  XLSX.writeFile(wb, `TransferStatus_${branchTag}_${fileRange}.xlsx`);
+  showToast(`✅ Export สำเร็จ ${arr.length} รายการ`);
 }
 
 // ===== MODAL HELPERS =====
