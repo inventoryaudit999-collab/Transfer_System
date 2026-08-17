@@ -2825,16 +2825,15 @@ async function loadMyEntries() {
   let records = {};
   if (firebaseOK) {
     try {
-      // Use branchId index for store/sgm; admin queries by createdBy
+      // ★ FIXED: ดึงข้อมูลทั้งหมด ไม่มี limitToLast
       let snap;
       if (currentUser.branchId) {
-        // Query by branchId (indexed) then filter createdBy in JS — far fewer rows
         snap = await db.ref('transfers')
           .orderByChild('branchId')
           .equalTo(currentUser.branchId)
-          .limitToLast(500).get();
+          .get();
       } else {
-        snap = await db.ref('transfers').limitToLast(300).get();
+        snap = await db.ref('transfers').get();
       }
       if (snap.exists()) {
         snap.forEach(c => {
@@ -2843,9 +2842,9 @@ async function loadMyEntries() {
         });
       }
     } catch(e) {
-      // Fallback: limitToLast without index
+      // Fallback: ดึงทั้งหมดไม่มี index
       try {
-        const snap2 = await db.ref('transfers').limitToLast(300).get();
+        const snap2 = await db.ref('transfers').get();
         if (snap2.exists()) snap2.forEach(c => { const v=c.val(); if(v.createdBy===currentUser.username) records[c.key]=v; });
       } catch(e2) { console.error('loadMyEntries error:', e2); }
     }
@@ -2856,6 +2855,9 @@ async function loadMyEntries() {
 
   const arr = Object.entries(records).map(([k,v]) => ({ id:k, ...v }))
     .sort((a,b) => b.date - a.date);
+
+  // ★ แสดงจำนวนข้อมูลทั้งหมดที่โหลดได้
+  console.log('[loadMyEntries] โหลดได้ทั้งหมด ' + arr.length + ' รายการ (ไม่มี limit)');
 
   if (arr.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">ยังไม่มีรายการ</div></div></td></tr>';
@@ -2891,8 +2893,8 @@ async function loadPendingEntries() {
       try {
         snap = await db.ref('transfers').orderByChild('status').equalTo('pending').get();
       } catch(idxErr) {
-        // Fallback if index not yet set: load recent 2000 and filter in JS
-        snap = await db.ref('transfers').limitToLast(2000).get();
+        // ★ FIXED: ดึงทั้งหมด ไม่มี limitToLast
+        snap = await db.ref('transfers').get();
       }
       if (snap.exists()) {
         snap.forEach(c => {
@@ -3007,20 +3009,20 @@ async function loadAllRecords() {
   let records = {};
   if (firebaseOK) {
     try {
+      // ★ FIXED: ดึงข้อมูลทั้งหมด ไม่มี limitToLast
       let snap;
       if (currentUser.role !== 'admin' && currentUser.branchId) {
-        // Query by branch index — only own branch records
         try {
           snap = await db.ref('transfers')
             .orderByChild('branchId')
             .equalTo(currentUser.branchId)
-            .limitToLast(1000).get();
+            .get();
         } catch(idxErr) {
-          snap = await db.ref('transfers').limitToLast(500).get();
+          snap = await db.ref('transfers').get();
         }
       } else {
-        // Admin: load recent 1000 (paginatable in future)
-        snap = await db.ref('transfers').limitToLast(1000).get();
+        // Admin: ดึงทั้งหมด
+        snap = await db.ref('transfers').get();
       }
       if (snap.exists()) records = snap.val();
     } catch(e) { console.error(e); }
@@ -3034,6 +3036,8 @@ async function loadAllRecords() {
     arr2 = arr2.filter(r => String(r.branchId) === String(currentUser.branchId));
   }
   allRecordsCache = arr2.sort((a,b) => b.date - a.date);
+  // ★ แสดงจำนวนข้อมูลทั้งหมด
+  console.log('[loadAllRecords] โหลดได้ทั้งหมด ' + Object.keys(records).length + ' รายการ (กรองแล้ว ' + arr2.length + ') — ไม่มี limit');
   renderAllRecords(allRecordsCache);
 }
 
@@ -3257,7 +3261,8 @@ async function exportExcel() {
   let records = {};
   if (firebaseOK) {
     try {
-      const snap = await db.ref('transfers').limitToLast(5000).get();
+      // ★ FIXED: ดึงทั้งหมดสำหรับ export
+      const snap = await db.ref('transfers').get();
       if (snap.exists()) records = snap.val();
     } catch(e) { console.error(e); }
   } else {
@@ -3372,20 +3377,21 @@ async function fetchScopedRecords() {
   let records = {};
   if (firebaseOK) {
     try {
+      // ★ FIXED: ดึงข้อมูลทั้งหมด ไม่มี limitToLast
       let snap;
       if (currentUser.branchId) {
         snap = await db.ref('transfers')
           .orderByChild('branchId')
           .equalTo(currentUser.branchId)
-          .limitToLast(2000).get();
+          .get();
       } else {
-        snap = await db.ref('transfers').limitToLast(2000).get();
+        snap = await db.ref('transfers').get();
       }
       if (snap.exists()) snap.forEach(c => { records[c.key] = c.val(); });
     } catch (e) {
       // Fallback without index
       try {
-        const s2 = await db.ref('transfers').limitToLast(2000).get();
+        const s2 = await db.ref('transfers').get();
         if (s2.exists()) s2.forEach(c => { records[c.key] = c.val(); });
       } catch (e2) { console.error('fetchScopedRecords error:', e2); }
     }
@@ -4215,7 +4221,8 @@ async function loadMissingDescTab() {
       snap = await db.ref('transfers').orderByChild('itemDesc').equalTo('').get();
     } catch(idxErr) {
       // Index not set yet — scan recent records
-      snap = await db.ref('transfers').limitToLast(2000).get();
+      // ★ FIXED: scan ทั้งหมด
+      snap = await db.ref('transfers').get();
     }
 
     if (snap.exists()) {
