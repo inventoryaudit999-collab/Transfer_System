@@ -1509,19 +1509,22 @@ td {
         <div class="stat-card"><div class="stat-num" id="statRejected" style="color:var(--danger);">—</div><div class="stat-label">ปฏิเสธ</div></div>
       </div>
 
-      <!-- Data Protection -->
-      <div class="card" style="border-left:4px solid var(--success);">
-        <div class="card-header" style="border-bottom-color:color-mix(in srgb,var(--success) 20%,var(--border));">
+      <!-- Data Protection (collapsed by default) -->
+      <div class="card" style="border-left:4px solid var(--success);padding:0;overflow:hidden;" id="dataProtectionCard">
+        <div class="card-header" style="border-bottom:none;margin-bottom:0;padding:12px 18px;cursor:pointer;" onclick="toggleDataProtection()">
           <div class="card-title"><div class="card-icon" style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success);">🛡️</div>ป้องกันข้อมูล (Data Protection)</div>
+          <button class="btn btn-outline btn-sm" style="pointer-events:none;" id="dpToggleBtn">▼ แสดง</button>
         </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
-          <button class="btn btn-success btn-sm" onclick="manualBackup()">💾 สำรองข้อมูลตอนนี้</button>
-          <button class="btn btn-warning btn-sm" onclick="restoreBackup()">♻️ กู้คืนข้อมูลล่าสุด</button>
-          <button class="btn btn-outline btn-sm" onclick="showFirebaseRulesModal()">🔧 ดู Firebase Rules</button>
-          <span style="font-size:.78rem;color:var(--text-muted);" id="lastBackupLabel"></span>
-        </div>
-        <div style="margin-top:10px;font-size:.82rem;color:var(--text-muted);">
-          🔒 ระบบสำรองข้อมูลอัตโนมัติทุก 6 ชั่วโมง • ลบรายการ = Soft Delete (กู้คืนได้) • ทุกการกระทำถูกบันทึกใน Audit Log
+        <div id="dataProtectionBody" style="display:none;padding:0 18px 14px;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <button class="btn btn-success btn-sm" onclick="event.stopPropagation();manualBackup()">💾 สำรองข้อมูลตอนนี้</button>
+            <button class="btn btn-warning btn-sm" onclick="event.stopPropagation();restoreBackup()">♻️ กู้คืนข้อมูลล่าสุด</button>
+            <button class="btn btn-outline btn-sm" onclick="event.stopPropagation();showFirebaseRulesModal()">🔧 ดู Firebase Rules</button>
+            <span style="font-size:.78rem;color:var(--text-muted);" id="lastBackupLabel"></span>
+          </div>
+          <div style="margin-top:10px;font-size:.82rem;color:var(--text-muted);">
+            🔒 ระบบสำรองข้อมูลอัตโนมัติทุก 6 ชั่วโมง • ลบรายการ = Soft Delete (กู้คืนได้) • ทุกการกระทำถูกบันทึกใน Audit Log
+          </div>
         </div>
       </div>
 
@@ -3902,6 +3905,19 @@ document.querySelectorAll('.modal-overlay').forEach(el => {
 // ===== TOAST =====
 let toastTimeout = null;
 function showToast(msg) {
+
+// ===== TOGGLE DATA PROTECTION PANEL =====
+function toggleDataProtection() {
+  const body = document.getElementById('dataProtectionBody');
+  const btn = document.getElementById('dpToggleBtn');
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    btn.textContent = '▲ ซ่อน';
+  } else {
+    body.style.display = 'none';
+    btn.textContent = '▼ แสดง';
+  }
+}
   const t = document.getElementById('toast');
   t.textContent = msg;
   t.classList.add('show');
