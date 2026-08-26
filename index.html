@@ -13,6 +13,16 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+<!-- CryptoJS for password hashing -->
+<script>
+// Simple SHA-256 hash function (no external dependency)
+async function sha256(message) {
+  const msgBuffer = new TextEncoder().encode(message);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+}
+</script>
 <!-- SheetJS for Excel export -->
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
@@ -1499,6 +1509,22 @@ td {
         <div class="stat-card"><div class="stat-num" id="statRejected" style="color:var(--danger);">—</div><div class="stat-label">ปฏิเสธ</div></div>
       </div>
 
+      <!-- Data Protection -->
+      <div class="card" style="border-left:4px solid var(--success);">
+        <div class="card-header" style="border-bottom-color:color-mix(in srgb,var(--success) 20%,var(--border));">
+          <div class="card-title"><div class="card-icon" style="background:color-mix(in srgb,var(--success) 15%,transparent);color:var(--success);">🛡️</div>ป้องกันข้อมูล (Data Protection)</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+          <button class="btn btn-success btn-sm" onclick="manualBackup()">💾 สำรองข้อมูลตอนนี้</button>
+          <button class="btn btn-warning btn-sm" onclick="restoreBackup()">♻️ กู้คืนข้อมูลล่าสุด</button>
+          <button class="btn btn-outline btn-sm" onclick="showFirebaseRulesModal()">🔧 ดู Firebase Rules</button>
+          <span style="font-size:.78rem;color:var(--text-muted);" id="lastBackupLabel"></span>
+        </div>
+        <div style="margin-top:10px;font-size:.82rem;color:var(--text-muted);">
+          🔒 ระบบสำรองข้อมูลอัตโนมัติทุก 6 ชั่วโมง • ลบรายการ = Soft Delete (กู้คืนได้) • ทุกการกระทำถูกบันทึกใน Audit Log
+        </div>
+      </div>
+
       <!-- User Management -->
       <div class="section-header">
         <div class="section-title"><span>👥</span> จัดการผู้ใช้งาน</div>
@@ -2355,6 +2381,7 @@ const DEFAULT_USERS = {
 
 // ===== STATE =====
 let db = null;
+let auth = null;
 let firebaseOK = false;
 let currentUser = null;
 let currentTheme = localStorage.getItem('tf_theme') || 'pearl';
@@ -2366,13 +2393,155 @@ let activeTab = 'entry';
 let itemSearchTimeout = null;
 let selectedItem = null;
 
+// ===== AUDIT LOG — บันทึกทุกการกระทำสำคัญ =====
+async function writeAuditLog(action, details) {
+  if (!firebaseOK || !currentUser) return;
+  try {
+    const logEntry = {
+      action,
+      userId: currentUser.username,
+      userRole: currentUser.role,
+      branchId: currentUser.branchId || null,
+      timestamp: Date.now(),
+      details: details || null
+    };
+    await db.ref('audit_log').push(logEntry);
+  } catch(e) { console.warn('[AuditLog] write failed:', e.message); }
+}
+
+// ===== BACKUP SYSTEM — สำรองข้อมูลอัตโนมัติ =====
+let lastBackupTime = parseInt(localStorage.getItem('tf_lastBackup') || '0');
+const BACKUP_INTERVAL = 6 * 60 * 60 * 1000; // 6 ชั่วโมง
+
+async function autoBackupIfNeeded() {
+  if (!firebaseOK || !currentUser || currentUser.role !== 'admin') return;
+  if (Date.now() - lastBackupTime < BACKUP_INTERVAL) return;
+
+  try {
+    console.log('[Backup] Starting automatic backup...');
+    const snap = await db.ref('transfers').get();
+    if (snap.exists()) {
+      const data = snap.val();
+      const recordCount = Object.keys(data).length;
+      const backupKey = 'backup_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '_' + Date.now();
+      await db.ref('backups/' + backupKey).set({
+        timestamp: Date.now(),
+        recordCount,
+        data,
+        createdBy: currentUser.username
+      });
+      lastBackupTime = Date.now();
+      localStorage.setItem('tf_lastBackup', String(lastBackupTime));
+      console.log('[Backup] ✅ Saved', recordCount, 'records as', backupKey);
+      writeAuditLog('auto_backup', { recordCount, backupKey });
+    }
+  } catch(e) {
+    console.warn('[Backup] Failed:', e.message);
+  }
+}
+
+// ===== MANUAL BACKUP — Admin กดเอง =====
+async function manualBackup() {
+  if (!firebaseOK || !currentUser || currentUser.role !== 'admin') {
+    showToast('⚠️ เฉพาะ Admin เท่านั้น'); return;
+  }
+  showToast('⏳ กำลังสำรองข้อมูล...');
+  try {
+    const snap = await db.ref('transfers').get();
+    if (!snap.exists()) { showToast('⚠️ ไม่มีข้อมูลให้สำรอง'); return; }
+    const data = snap.val();
+    const recordCount = Object.keys(data).length;
+    const backupKey = 'manual_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '_' + Date.now();
+    await db.ref('backups/' + backupKey).set({
+      timestamp: Date.now(),
+      recordCount,
+      data,
+      createdBy: currentUser.username,
+      type: 'manual'
+    });
+    lastBackupTime = Date.now();
+    localStorage.setItem('tf_lastBackup', String(lastBackupTime));
+    showToast(`✅ สำรองข้อมูลสำเร็จ — ${recordCount} รายการ`);
+    writeAuditLog('manual_backup', { recordCount, backupKey });
+  } catch(e) {
+    showToast('❌ สำรองข้อมูลไม่สำเร็จ: ' + e.message);
+  }
+}
+
+// ===== RESTORE BACKUP — กู้คืนข้อมูล =====
+async function restoreBackup() {
+  if (!firebaseOK || !currentUser || currentUser.role !== 'admin') {
+    showToast('⚠️ เฉพาะ Admin เท่านั้น'); return;
+  }
+  try {
+    const snap = await db.ref('backups').orderByChild('timestamp').limitToLast(5).get();
+    if (!snap.exists()) { showToast('⚠️ ไม่พบข้อมูลสำรอง'); return; }
+
+    const backups = [];
+    snap.forEach(c => { backups.push({ key: c.key, ...c.val() }); });
+    backups.sort((a, b) => b.timestamp - a.timestamp);
+
+    const latest = backups[0];
+    const dateStr = formatDate(latest.timestamp);
+    showConfirm(
+      `กู้คืนข้อมูลจากสำเนา "${latest.key}"?\n📅 ${dateStr}\n📊 ${latest.recordCount} รายการ\n⚠️ ข้อมูลปัจจุบันจะถูกเขียนทับ`,
+      async () => {
+        try {
+          showToast('⏳ กำลังกู้คืนข้อมูล...');
+          // Backup current state first
+          const currentSnap = await db.ref('transfers').get();
+          if (currentSnap.exists()) {
+            await db.ref('backups/pre_restore_' + Date.now()).set({
+              timestamp: Date.now(),
+              recordCount: Object.keys(currentSnap.val()).length,
+              data: currentSnap.val(),
+              createdBy: currentUser.username,
+              type: 'pre_restore_safety'
+            });
+          }
+          // Restore
+          await db.ref('transfers').set(latest.data);
+          writeAuditLog('restore_backup', { backupKey: latest.key, recordCount: latest.recordCount });
+          showToast(`✅ กู้คืนสำเร็จ — ${latest.recordCount} รายการ`);
+          loadAllRecords();
+          loadAdminStats();
+        } catch(e) {
+          showToast('❌ กู้คืนไม่สำเร็จ: ' + e.message);
+        }
+      }
+    );
+  } catch(e) {
+    showToast('❌ ไม่สามารถโหลดข้อมูลสำรอง: ' + e.message);
+  }
+}
+
+// ===== FIREBASE AUTH — Anonymous Auth สำหรับ security rules =====
+async function signInFirebaseAuth() {
+  if (!auth) return false;
+  try {
+    // ใช้ Anonymous Auth — ง่ายที่สุด ไม่ต้องเปลี่ยน login flow
+    // เพียงแค่ทำให้ auth !== null ใน Firebase Rules
+    await auth.signInAnonymously();
+    console.log('[Auth] ✅ Firebase Anonymous Auth signed in');
+    return true;
+  } catch(e) {
+    console.warn('[Auth] Anonymous sign-in failed:', e.message);
+    console.warn('[Auth] ⚠️ Enable Anonymous Auth in Firebase Console → Authentication → Sign-in method → Anonymous → Enable');
+    return false;
+  }
+}
+
 // ===== INIT =====
-function init() {
+async function init() {
   setTheme(currentTheme);
   try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.database();
+    auth = firebase.auth();
     firebaseOK = true;
+
+    // Sign in with Firebase Auth (Anonymous)
+    await signInFirebaseAuth();
   } catch(e) {
     firebaseOK = false;
     console.warn('Firebase not configured — using local demo mode');
@@ -2414,33 +2583,72 @@ async function doLogin() {
   btn.disabled = true;
 
   let user = null;
+  const hashedPass = await sha256(p);
 
   if (firebaseOK) {
+    // Ensure Firebase Auth is signed in
+    if (auth && !auth.currentUser) {
+      await signInFirebaseAuth();
+    }
+
     // Try Firebase
     try {
       const snap = await db.ref('users/' + u).get();
       if (snap.exists()) {
         const data = snap.val();
-        if (data.password === p) user = { ...data, username: u };
+        // Support both hashed and legacy plain text passwords
+        if (data.passwordHash === hashedPass || data.password === p) {
+          user = { ...data, username: u };
+          // Migrate plain text password to hashed if needed
+          if (!data.passwordHash || data.password === p) {
+            try {
+              await db.ref('users/' + u).update({
+                passwordHash: hashedPass,
+                password: null  // ลบ plain text password
+              });
+              console.log('[Auth] Migrated password to hash for:', u);
+            } catch(e) { /* ไม่เป็นไร — จะ migrate ครั้งหน้า */ }
+          }
+        }
       }
     } catch(e) { console.error(e); }
   }
 
-  // Fallback to default users
+  // Fallback to default users (legacy support)
   if (!user && DEFAULT_USERS[u] && DEFAULT_USERS[u].password === p) {
     user = { ...DEFAULT_USERS[u] };
+    // Save hashed version to Firebase for next login
+    if (firebaseOK) {
+      try {
+        await db.ref('users/' + u).update({
+          ...DEFAULT_USERS[u],
+          passwordHash: hashedPass,
+          password: null
+        });
+      } catch(e) { /* ไม่เป็นไร */ }
+    }
   }
 
   btn.innerHTML = '<span>เข้าสู่ระบบ</span>';
   btn.disabled = false;
 
   if (user) {
-    currentUser = user;
-    localStorage.setItem('tf_user', JSON.stringify(user));
+    // Don't store password in localStorage session
+    const sessionUser = { ...user };
+    delete sessionUser.password;
+    delete sessionUser.passwordHash;
+    currentUser = sessionUser;
+    localStorage.setItem('tf_user', JSON.stringify(sessionUser));
+
+    // Audit log
+    writeAuditLog('login', { username: u, role: user.role, branchId: user.branchId });
+
     showApp();
   } else {
     errEl.textContent = 'Username หรือ Password ไม่ถูกต้อง';
     errEl.style.display = '';
+    // Log failed attempt
+    writeAuditLog('login_failed', { username: u });
   }
 }
 
@@ -2515,6 +2723,8 @@ function showApp() {
   // Init Firebase users if first time admin
   if (currentUser.role === 'admin' && firebaseOK) {
     initDefaultUsersInFirebase();
+    // Auto-backup ทุก 6 ชั่วโมง
+    autoBackupIfNeeded();
   }
 
   // ---- Presence: register online + listen for force-logout ----
@@ -2615,7 +2825,18 @@ function switchTab(id) {
 
   if (id === 'approve') loadPendingEntries();
   if (id === 'records') loadAllRecords();
-  if (id === 'admin') { loadUsers(); loadAdminStats(); }
+  if (id === 'admin') {
+    loadUsers(); loadAdminStats();
+    // Show last backup time
+    const lbl = document.getElementById('lastBackupLabel');
+    if (lbl) {
+      if (lastBackupTime > 0) {
+        lbl.textContent = '📅 สำรองล่าสุด: ' + formatDate(lastBackupTime);
+      } else {
+        lbl.textContent = '⚠️ ยังไม่เคยสำรองข้อมูล';
+      }
+    }
+  }
   if (id === 'entry') loadMyEntries();
   if (id === 'mystatus') loadMyStatus();
   if (id === 'items') loadItemsTab();
@@ -2798,6 +3019,7 @@ async function submitEntry() {
   if (firebaseOK) {
     try {
       await db.ref('transfers/' + id).set(rec);
+      writeAuditLog('submit_entry', { transferId: id, itemCode, qty });
     } catch(e) { console.error(e); showToast('❌ บันทึกไม่สำเร็จ: ' + e.message); return; }
   } else {
     // Local demo storage
@@ -2825,9 +3047,10 @@ async function loadMyEntries() {
   let records = {};
   if (firebaseOK) {
     try {
-      // ★ FIXED: ดึงข้อมูลทั้งหมด ไม่มี limitToLast
+      // Use branchId index for store/sgm; admin queries by createdBy
       let snap;
       if (currentUser.branchId) {
+        // Query by branchId (indexed) then filter createdBy in JS — far fewer rows
         snap = await db.ref('transfers')
           .orderByChild('branchId')
           .equalTo(currentUser.branchId)
@@ -2842,7 +3065,7 @@ async function loadMyEntries() {
         });
       }
     } catch(e) {
-      // Fallback: ดึงทั้งหมดไม่มี index
+      // Fallback: load all without index
       try {
         const snap2 = await db.ref('transfers').get();
         if (snap2.exists()) snap2.forEach(c => { const v=c.val(); if(v.createdBy===currentUser.username) records[c.key]=v; });
@@ -2854,10 +3077,8 @@ async function loadMyEntries() {
   }
 
   const arr = Object.entries(records).map(([k,v]) => ({ id:k, ...v }))
+    .filter(r => r.status !== 'deleted')
     .sort((a,b) => b.date - a.date);
-
-  // ★ แสดงจำนวนข้อมูลทั้งหมดที่โหลดได้
-  console.log('[loadMyEntries] โหลดได้ทั้งหมด ' + arr.length + ' รายการ (ไม่มี limit)');
 
   if (arr.length === 0) {
     tbody.innerHTML = '<tr><td colspan="9"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">ยังไม่มีรายการ</div></div></td></tr>';
@@ -2893,13 +3114,13 @@ async function loadPendingEntries() {
       try {
         snap = await db.ref('transfers').orderByChild('status').equalTo('pending').get();
       } catch(idxErr) {
-        // ★ FIXED: ดึงทั้งหมด ไม่มี limitToLast
+        // Fallback if index not yet set: load all and filter in JS
         snap = await db.ref('transfers').get();
       }
       if (snap.exists()) {
         snap.forEach(c => {
           const v = c.val();
-          if (v.status === 'pending') records[c.key] = v;
+          if (v.status === 'pending' && v.status !== 'deleted') records[c.key] = v;
         });
       }
     } catch(e) {
@@ -2969,6 +3190,7 @@ function updatePendingBadge(n) {
 // ===== APPROVE / REJECT =====
 async function approveRecord(id) {
   await updateRecordStatus(id, 'approved', currentUser.displayName || currentUser.username);
+  writeAuditLog('approve', { transferId: id });
   showToast('✅ อนุมัติสำเร็จ');
   loadPendingEntries();
   if (activeTab === 'records') loadAllRecords();
@@ -2982,6 +3204,7 @@ function openRejectModal(id) {
   document.getElementById('rejectOkBtn').onclick = async () => {
     const reason = document.getElementById('rejectReason').value.trim();
     await updateRecordStatus(rejectTargetId, 'rejected', currentUser.displayName || currentUser.username, reason);
+    writeAuditLog('reject', { transferId: rejectTargetId, reason });
     closeModal('rejectModal');
     showToast('❌ ปฏิเสธรายการแล้ว');
     loadPendingEntries();
@@ -3004,14 +3227,14 @@ async function updateRecordStatus(id, status, checker, reason) {
 // ===== LOAD ALL RECORDS =====
 async function loadAllRecords() {
   const tbody = document.getElementById('allRecordsBody');
-  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:20px;">กำลังโหลด...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:20px;">กำลังโหลดข้อมูลทั้งหมดจาก Firebase...</td></tr>';
 
   let records = {};
   if (firebaseOK) {
     try {
-      // ★ FIXED: ดึงข้อมูลทั้งหมด ไม่มี limitToLast
       let snap;
       if (currentUser.role !== 'admin' && currentUser.branchId) {
+        // Query by branch index — only own branch records
         try {
           snap = await db.ref('transfers')
             .orderByChild('branchId')
@@ -3021,23 +3244,24 @@ async function loadAllRecords() {
           snap = await db.ref('transfers').get();
         }
       } else {
-        // Admin: ดึงทั้งหมด
+        // Admin: load all records — NO LIMIT
         snap = await db.ref('transfers').get();
       }
       if (snap.exists()) records = snap.val();
+      console.log('[loadAllRecords] Loaded', Object.keys(records).length, 'records from Firebase (no limit)');
     } catch(e) { console.error(e); }
   } else {
     records = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
   }
 
   let arr2 = Object.entries(records).map(([k,v]) => ({ id:k, ...v }));
+  // Filter out soft-deleted records (unless admin explicitly wants them)
+  arr2 = arr2.filter(r => r.status !== 'deleted');
   // SGM: own branch only; Store: own branch only; Admin: all
   if (currentUser.role !== 'admin' && currentUser.branchId) {
     arr2 = arr2.filter(r => String(r.branchId) === String(currentUser.branchId));
   }
   allRecordsCache = arr2.sort((a,b) => b.date - a.date);
-  // ★ แสดงจำนวนข้อมูลทั้งหมด
-  console.log('[loadAllRecords] โหลดได้ทั้งหมด ' + Object.keys(records).length + ' รายการ (กรองแล้ว ' + arr2.length + ') — ไม่มี limit');
   renderAllRecords(allRecordsCache);
 }
 
@@ -3090,20 +3314,65 @@ function badgeHTML(status) {
   return '<span class="badge" style="background:var(--bg);color:var(--text-muted);">—</span>';
 }
 
-// ===== DELETE RECORD =====
+// ===== DELETE RECORD (SOFT DELETE — ข้อมูลไม่หายจริง) =====
 async function deleteRecord(id, context) {
-  showConfirm('ต้องการลบรายการนี้ใช่หรือไม่?', async () => {
+  showConfirm('ต้องการลบรายการนี้ใช่หรือไม่?\n(ข้อมูลจะถูกซ่อน ไม่ลบถาวร — สามารถกู้คืนได้)', async () => {
     if (firebaseOK) {
-      await db.ref('transfers/' + id).remove();
+      try {
+        // อ่าน status เดิมก่อน soft delete
+        const snap = await db.ref('transfers/' + id + '/status').get();
+        const prevStatus = snap.exists() ? snap.val() : 'unknown';
+        // Soft delete: เปลี่ยน status เป็น deleted แทนการลบจริง
+        await db.ref('transfers/' + id).update({
+          status: 'deleted',
+          _previousStatus: prevStatus,
+          deletedBy: currentUser.username,
+          deletedAt: Date.now()
+        });
+        // Audit log
+        writeAuditLog('soft_delete', { transferId: id, previousStatus: prevStatus });
+      } catch(e) {
+        showToast('❌ ลบไม่สำเร็จ: ' + e.message);
+        return;
+      }
     } else {
       const local = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
-      delete local[id];
+      if (local[id]) {
+        local[id]._previousStatus = local[id].status;
+        local[id].status = 'deleted';
+        local[id].deletedBy = currentUser.username;
+        local[id].deletedAt = Date.now();
+      }
       localStorage.setItem('tf_transfers', JSON.stringify(local));
     }
-    showToast('🗑️ ลบรายการแล้ว');
+    showToast('🗑️ ลบรายการแล้ว (soft delete)');
     if (context === 'pending') loadPendingEntries();
     loadAllRecords();
   });
+}
+
+// ===== RESTORE DELETED RECORD =====
+async function restoreRecord(id) {
+  if (!firebaseOK) { showToast('❌ ต้องเชื่อมต่อ Firebase'); return; }
+  try {
+    const snap = await db.ref('transfers/' + id).get();
+    if (!snap.exists()) { showToast('❌ ไม่พบรายการ'); return; }
+    const data = snap.val();
+    const prevStatus = data._previousStatus || 'pending';
+    await db.ref('transfers/' + id).update({
+      status: prevStatus,
+      _previousStatus: null,
+      deletedBy: null,
+      deletedAt: null,
+      restoredBy: currentUser.username,
+      restoredAt: Date.now()
+    });
+    writeAuditLog('restore_record', { transferId: id, restoredStatus: prevStatus });
+    showToast('✅ กู้คืนรายการสำเร็จ');
+    loadAllRecords();
+  } catch(e) {
+    showToast('❌ กู้คืนไม่สำเร็จ: ' + e.message);
+  }
 }
 
 // ===== ADMIN STATS =====
@@ -3117,7 +3386,7 @@ async function loadAdminStats() {
   } else {
     records = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
   }
-  const arr = Object.values(records);
+  const arr = Object.values(records).filter(r => r.status !== 'deleted');
   document.getElementById('statTotal').textContent = arr.length;
   document.getElementById('statPending').textContent = arr.filter(r=>r.status==='pending').length;
   document.getElementById('statApproved').textContent = arr.filter(r=>r.status==='approved').length;
@@ -3201,7 +3470,10 @@ async function saveUser() {
   if (!editId && !pass) { showToast('⚠️ กรุณากรอก Password สำหรับ User ใหม่'); return; }
 
   const userData = { username, displayName, role, branchId };
-  if (pass) userData.password = pass;
+  if (pass) {
+    userData.passwordHash = await sha256(pass);
+    userData.password = null;  // ไม่เก็บ plain text
+  }
 
   if (firebaseOK) {
     try {
@@ -3211,6 +3483,7 @@ async function saveUser() {
 
   usersCache[username] = { ...usersCache[username], ...userData };
   closeModal('userModal');
+  writeAuditLog(editId ? 'edit_user' : 'add_user', { targetUser: username, role });
   showToast('✅ บันทึก User สำเร็จ');
   loadUsers();
 }
@@ -3221,6 +3494,7 @@ async function deleteUser(userId) {
       try { await db.ref('users/' + userId).remove(); } catch(e) {}
     }
     delete usersCache[userId];
+    writeAuditLog('delete_user', { targetUser: userId });
     showToast('🗑️ ลบ User แล้ว');
     loadUsers();
   });
@@ -3231,17 +3505,25 @@ async function initDefaultUsersInFirebase() {
   try {
     const snap = await db.ref('users/admin').get();
     if (!snap.exists()) {
-      showToast('⏳ กำลังสร้าง Users ทั้งหมด...');
+      showToast('⏳ กำลังสร้าง Users ทั้งหมด (พร้อม hash password)...');
       // Write in batches to avoid timeout
       const entries = Object.entries(DEFAULT_USERS);
       const BATCH = 20;
       for (let i = 0; i < entries.length; i += BATCH) {
         const batch = entries.slice(i, i + BATCH);
         const updates = {};
-        batch.forEach(([k,v]) => { updates['users/' + k] = v; });
+        for (const [k, v] of batch) {
+          const hashed = await sha256(v.password);
+          updates['users/' + k] = {
+            ...v,
+            passwordHash: hashed,
+            password: null  // ไม่เก็บ plain text
+          };
+        }
         await db.ref().update(updates);
       }
-      showToast('✅ สร้าง Users ครบ ' + entries.length + ' accounts');
+      showToast('✅ สร้าง Users ครบ ' + entries.length + ' accounts (passwords hashed)');
+      writeAuditLog('init_default_users', { count: entries.length });
     }
   } catch(e) { console.error('initDefaultUsers error:', e); }
 }
@@ -3261,7 +3543,6 @@ async function exportExcel() {
   let records = {};
   if (firebaseOK) {
     try {
-      // ★ FIXED: ดึงทั้งหมดสำหรับ export
       const snap = await db.ref('transfers').get();
       if (snap.exists()) records = snap.val();
     } catch(e) { console.error(e); }
@@ -3377,7 +3658,6 @@ async function fetchScopedRecords() {
   let records = {};
   if (firebaseOK) {
     try {
-      // ★ FIXED: ดึงข้อมูลทั้งหมด ไม่มี limitToLast
       let snap;
       if (currentUser.branchId) {
         snap = await db.ref('transfers')
@@ -3399,7 +3679,8 @@ async function fetchScopedRecords() {
     records = JSON.parse(localStorage.getItem('tf_transfers') || '{}');
   }
 
-  let arr = Object.entries(records).map(([k, v]) => ({ id: k, ...v }));
+  let arr = Object.entries(records).map(([k, v]) => ({ id: k, ...v }))
+    .filter(r => r.status !== 'deleted');
 
   // Enforce scope in JS (defense-in-depth, and covers fallback paths)
   if (currentUser.role === 'store' && currentUser.branchId) {
@@ -3421,7 +3702,19 @@ async function loadMyStatus() {
       ? 'สาขา: ' + (BRANCHES[currentUser.branchId] || currentUser.branchId)
       : 'สาขา: ส่วนกลาง (ทุกสาขา)';
   }
-  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:20px;">กำลังโหลด...</td></tr>';
+  tbody.innerHTML = '<tr><td colspan="12" style="text-align:center;color:var(--text-muted);padding:20px;">กำลังโหลดข้อมูลทั้งหมด...</td></tr>';
+
+  // ── Diagnostic: count ALL records in Firebase (no filter, no limit) ──
+  if (firebaseOK) {
+    try {
+      const countSnap = await db.ref('transfers').get();
+      const totalInFirebase = countSnap.exists() ? Object.keys(countSnap.val()).length : 0;
+      console.log('[Diagnostic] Total records in Firebase /transfers:', totalInFirebase);
+      showToast(`📊 Firebase มีข้อมูลทั้งหมด ${totalInFirebase} รายการ`);
+    } catch(e) {
+      console.warn('[Diagnostic] count error:', e.message);
+    }
+  }
 
   myStatusCache = await fetchScopedRecords();
   renderMyStatusStats(myStatusCache);
@@ -4145,6 +4438,7 @@ function deleteItem(code) {
     if (!firebaseOK) { showToast('❌ ต้องเชื่อมต่อ Firebase'); return; }
     try {
       await db.ref('items/' + code).remove();
+      writeAuditLog('delete_item', { itemCode: code });
       // Remove from in-memory caches
       if (ITEMS_DB !== null) delete ITEMS_DB[code];
       delete ITEM_CACHE[code];
@@ -4220,8 +4514,7 @@ async function loadMissingDescTab() {
     try {
       snap = await db.ref('transfers').orderByChild('itemDesc').equalTo('').get();
     } catch(idxErr) {
-      // Index not set yet — scan recent records
-      // ★ FIXED: scan ทั้งหมด
+      // Index not set yet — scan all records
       snap = await db.ref('transfers').get();
     }
 
@@ -4472,11 +4765,47 @@ init();
     </p>
     <pre id="rulesCodeBlock" style="background:var(--bg-hover);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:.82rem;overflow:auto;white-space:pre;color:var(--text);">{
   "rules": {
-    "presence":    { ".read": true, ".write": true },
-    "forceLogout": { ".read": true, ".write": true },
-    "transfers":   { ".read": true, ".write": true },
-    "users":       { ".read": true, ".write": true },
-    "items":       { ".read": true, ".write": true }
+    "transfers": {
+      ".read": "auth !== null",
+      ".write": "auth !== null",
+      ".indexOn": ["branchId", "status", "itemDesc"],
+      "$transferId": {
+        ".validate": "newData.hasChildren(['date','itemCode','status','createdBy'])",
+        "status": {
+          ".validate": "newData.val() === 'pending' || newData.val() === 'approved' || newData.val() === 'rejected' || newData.val() === 'deleted'"
+        }
+      }
+    },
+    "users": {
+      ".read": "auth !== null",
+      ".write": "auth !== null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "items": {
+      ".read": "auth !== null",
+      ".write": "auth !== null"
+    },
+    "presence": {
+      ".read": "auth !== null",
+      ".write": "auth !== null",
+      "$uid": {
+        ".write": "auth !== null && auth.uid === $uid"
+      }
+    },
+    "forceLogout": {
+      ".read": "auth !== null",
+      ".write": "auth !== null"
+    },
+    "audit_log": {
+      ".read": "auth !== null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth !== null",
+      "$logId": {
+        ".validate": "newData.hasChildren(['action','userId','timestamp'])"
+      }
+    },
+    "backups": {
+      ".read": "auth !== null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      ".write": "auth !== null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    }
   }
 }</pre>
     <div class="modal-footer">
